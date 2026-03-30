@@ -1,0 +1,309 @@
+[gd_scene load_steps=20 format=3 uid="uid://13fdlkxeccj1"]
+
+[ext_resource type="Script" uid="uid://dmsj4ekbiqrvr" path="res://scripts/race.gd" id="1"]
+[ext_resource type="Script" uid="uid://lmu5w71pep8v" path="res://scripts/player_race_car.gd" id="2"]
+[ext_resource type="Script" uid="uid://bl0i4wxc3dr8l" path="res://scripts/opponent_race_car.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/stl_mesh_instance.gd" id="4"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
+sky_top_color = Color(0.25, 0.35, 0.55, 1)
+sky_horizon_color = Color(0.55, 0.6, 0.65, 1)
+ground_bottom_color = Color(0.15, 0.16, 0.18, 1)
+ground_horizon_color = Color(0.4, 0.42, 0.45, 1)
+
+[sub_resource type="Sky" id="Sky1"]
+sky_material = SubResource("SkyMat")
+
+[sub_resource type="Environment" id="Env1"]
+background_mode = 2
+sky = SubResource("Sky1")
+ambient_light_source = 2
+ambient_light_color = Color(0.5, 0.52, 0.55, 1)
+ambient_light_energy = 0.55
+
+[sub_resource type="StandardMaterial3D" id="GroundMat"]
+albedo_color = Color(0.18, 0.19, 0.2, 1)
+
+[sub_resource type="BoxMesh" id="GroundMesh"]
+material = SubResource("GroundMat")
+size = Vector3(40, 1, 520)
+
+[sub_resource type="BoxShape3D" id="GroundShape"]
+size = Vector3(40, 1, 520)
+
+[sub_resource type="StandardMaterial3D" id="CarMatP"]
+albedo_color = Color(0.2, 0.55, 0.95, 1)
+metallic = 0.35
+
+[sub_resource type="BoxMesh" id="CarMeshP"]
+material = SubResource("CarMatP")
+size = Vector3(1.6, 0.5, 3.8)
+
+[sub_resource type="BoxShape3D" id="CarShapeP"]
+size = Vector3(1.6, 0.5, 3.8)
+
+[sub_resource type="StandardMaterial3D" id="CarMatO"]
+albedo_color = Color(0.9, 0.25, 0.2, 1)
+metallic = 0.35
+
+[sub_resource type="BoxMesh" id="CarMeshO"]
+material = SubResource("CarMatO")
+size = Vector3(1.6, 0.5, 3.8)
+
+[sub_resource type="BoxShape3D" id="CarShapeO"]
+size = Vector3(1.6, 0.5, 3.8)
+
+[sub_resource type="CylinderMesh" id="WheelMesh"]
+top_radius = 0.18
+bottom_radius = 0.18
+height = 0.12
+radial_segments = 18
+
+[sub_resource type="StandardMaterial3D" id="WheelMat"]
+albedo_color = Color(0.08, 0.08, 0.08, 1)
+metallic = 0.1
+roughness = 0.85
+
+[sub_resource type="BoxShape3D" id="FinishShape"]
+size = Vector3(24, 8, 3)
+
+[node name="Race" type="Node3D"]
+script = ExtResource("1")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env1")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.25, 0.433, 0, 0.866, 0.5, -0.5, -0.433, 0.75, 0, 18, 8)
+light_energy = 1.1
+shadow_enabled = true
+
+[node name="Ground" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 210)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("GroundMesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+shape = SubResource("GroundShape")
+
+[node name="PlayerCar" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.35, 0)
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("2")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="PlayerCar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.9)
+script = ExtResource("4")
+surface_material_override/0 = SubResource("CarMatP")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PlayerCar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.9)
+shape = SubResource("CarShapeP")
+
+[node name="WheelFrontLeft" type="MeshInstance3D" parent="PlayerCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.65, -0.17, 3.5)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelFrontRight" type="MeshInstance3D" parent="PlayerCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.65, -0.17, 3.5)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelBackLeft" type="MeshInstance3D" parent="PlayerCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.65, -0.17, 0.3)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelBackRight" type="MeshInstance3D" parent="PlayerCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.65, -0.17, 0.3)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="RaceCamera" type="Camera3D" parent="PlayerCar"]
+position = Vector3(0, 2.2, -8.5)
+rotation_degrees = Vector3(-14, 180, 0)
+current = true
+fov = 68.0
+
+[node name="OpponentCar" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 0.35, 0)
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("3")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="OpponentCar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.9)
+script = ExtResource("4")
+surface_material_override/0 = SubResource("CarMatO")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="OpponentCar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.9)
+shape = SubResource("CarShapeO")
+
+[node name="WheelFrontLeft" type="MeshInstance3D" parent="OpponentCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.65, -0.17, 3.5)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelFrontRight" type="MeshInstance3D" parent="OpponentCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.65, -0.17, 3.5)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelBackLeft" type="MeshInstance3D" parent="OpponentCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.65, -0.17, 0.3)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelBackRight" type="MeshInstance3D" parent="OpponentCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.65, -0.17, 0.3)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="FinishLine" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 402.336)
+collision_layer = 0
+collision_mask = 2
+monitoring = true
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="FinishLine"]
+shape = SubResource("FinishShape")
+
+[node name="RaceUI" type="CanvasLayer" parent="."]
+
+[node name="TrafficLights" type="Control" parent="RaceUI"]
+layout_mode = 3
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 20.0
+offset_bottom = 104.0
+grow_horizontal = 2
+
+[node name="Center" type="CenterContainer" parent="RaceUI/TrafficLights"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HBox" type="HBoxContainer" parent="RaceUI/TrafficLights/Center"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="LightRed" type="ColorRect" parent="RaceUI/TrafficLights/Center/HBox"]
+custom_minimum_size = Vector2(52, 52)
+layout_mode = 2
+color = Color(1, 0.12, 0.12, 1)
+
+[node name="LightOrange" type="ColorRect" parent="RaceUI/TrafficLights/Center/HBox"]
+custom_minimum_size = Vector2(52, 52)
+layout_mode = 2
+color = Color(0.12, 0.08, 0.03, 1)
+
+[node name="LightGreen" type="ColorRect" parent="RaceUI/TrafficLights/Center/HBox"]
+custom_minimum_size = Vector2(52, 52)
+layout_mode = 2
+color = Color(0.04, 0.1, 0.05, 1)
+
+[node name="Panel" type="PanelContainer" parent="RaceUI"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -320.0
+offset_bottom = 160.0
+grow_horizontal = 0
+
+[node name="Margin" type="MarginContainer" parent="RaceUI/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="RaceUI/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="OppLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Opponent: —"
+
+[node name="SpeedLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Speed: 0 km/h"
+
+[node name="DistLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
+layout_mode = 2
+text = "To finish: —"
+
+[node name="TimeLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Time: 0.00 s"
+
+[node name="HintLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
+layout_mode = 2
+text = "W / Up: throttle · S / Down: brake · A/D or arrows: steer"
+
+[node name="ResultPanel" type="Control" parent="RaceUI"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ColorRect" type="ColorRect" parent="RaceUI/ResultPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="Panel" type="PanelContainer" parent="RaceUI/ResultPanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -90.0
+offset_right = 220.0
+offset_bottom = 90.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="RaceUI/ResultPanel/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="RaceUI/ResultPanel/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ResultLabel" type="Label" parent="RaceUI/ResultPanel/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Result"
+horizontal_alignment = 1
+
+[node name="GarageBtn" type="Button" parent="RaceUI/ResultPanel/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Back to garage"
+
+[node name="MenuBtn" type="Button" parent="RaceUI/ResultPanel/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Main menu"
+
+[connection signal="body_entered" from="FinishLine" to="." method="_on_finish_area_body_entered"]
+[connection signal="pressed" from="RaceUI/ResultPanel/Panel/Margin/VBox/GarageBtn" to="." method="_on_back_garage_pressed"]
+[connection signal="pressed" from="RaceUI/ResultPanel/Panel/Margin/VBox/MenuBtn" to="." method="_on_main_menu_pressed"]
