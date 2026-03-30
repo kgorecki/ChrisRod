@@ -46,8 +46,19 @@ func _ready() -> void:
 	_refresh_traffic_lights()
 	# Defer so the MeshInstance child scripts have a chance
 	# to populate `MeshInstance3D.mesh` before we inspect it.
-	call_deferred(&"_debug_car_mesh_resource_load")
-	call_deferred(&"_debug_car_mesh_instances")
+	call_deferred("_debug_car_mesh_resource_load")
+	call_deferred("_debug_car_mesh_instances")
+
+	# Forward selected model and material from GameState to the player's CarVisual.
+	var pc := $PlayerCar.get_node_or_null("CarVisual")
+	if pc != null:
+		pc.set_model(GameState.selected_car_stl_path)
+		if GameState.selected_car_material != null:
+			pc.set_material(GameState.selected_car_material)
+		pc.align_to_floor(get_node("Ground"))
+	var oc := $OpponentCar.get_node_or_null("CarVisual")
+	if oc != null:
+		oc.align_to_floor(get_node("Ground"))
 
 
 func is_race_started() -> bool:
@@ -64,7 +75,7 @@ func _debug_car_mesh_instances() -> void:
 func _debug_car_mesh_resource_load() -> void:
 	# One-time check: whether Godot can actually load the STL import resource.
 	var stl_path := "res://assets/vette-c1.stl"
-	var exists_array_mesh := ResourceLoader.exists(stl_path, &"ArrayMesh")
+	var exists_array_mesh := ResourceLoader.exists(stl_path, "ArrayMesh")
 	var loaded := ResourceLoader.load(stl_path)
 	var loaded_type := "<null>"
 	if loaded != null:
@@ -89,7 +100,7 @@ func _debug_body_mesh_instances(body: Node, label: String) -> void:
 			var resource_path := "<null>"
 			if mesh != null:
 				resource_path = mesh.resource_path
-				if mesh.has_method(&"get_surface_count"):
+				if mesh.has_method("get_surface_count"):
 					surfaces = mesh.get_surface_count()
 
 			var aabb := mi.get_aabb() # local-space bounds
@@ -181,3 +192,4 @@ func _on_back_garage_pressed() -> void:
 
 func _on_main_menu_pressed() -> void:
 	get_tree().change_scene_to_file(GameState.SCENE_MAIN_MENU)
+  

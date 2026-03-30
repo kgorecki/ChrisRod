@@ -32,7 +32,7 @@ func _steer_input() -> float:
 
 func _physics_process(delta: float) -> void:
 	var race := get_parent()
-	if race and race.has_method(&"is_race_started") and not race.is_race_started():
+	if race and race.has_method("is_race_started") and not race.is_race_started():
 		forward_speed = 0.0
 		velocity = Vector3.ZERO
 		move_and_slide()

@@ -1,6 +1,6 @@
 extends Node3D
 
-@onready var _car_pivot: Node3D = $CarPivot
+@onready var _car_pivot: Node3D = $Car
 @onready var _camera_pivot: Node3D = $CameraPivot
 @onready var _camera_pitch: Node3D = $CameraPivot/Pitch
 @onready var _camera: Camera3D = $CameraPivot/Pitch/Camera3D
@@ -25,16 +25,16 @@ func _ready() -> void:
 	_stats_label = _stats_panel.get_node("Panel/Margin/VBox/StatsText") as Label
 	_clock_menu.visible = false
 	_stats_panel.visible = false
-	$InteractClock.set_meta(&"garage_interact", &"clock")
-	$InteractDesk.set_meta(&"garage_interact", &"desk")
-	$InteractDoors.set_meta(&"garage_interact", &"doors")
+	$InteractClock.set_meta("garage_interact", "clock")
+	$InteractDesk.set_meta("garage_interact", "desk")
+	$InteractDoors.set_meta("garage_interact", "doors")
 	_update_camera_transform()
 
 	# Defer so MeshInstance scripts (like the STL loader) have a chance
 	# to populate `MeshInstance3D.mesh` before we inspect it.
-	call_deferred(&"_debug_car_mesh")
+	call_deferred("_debug_car_mesh")
 	# Also align wheels to the floor after meshes are ready.
-	call_deferred(&"_align_wheels_to_floor")
+	call_deferred("_align_wheels_to_floor")
 
 	# If the CarBody emits a signal when its STL finishes loading, connect to it
 	var car_body := _car_pivot.get_node_or_null("CarBody") as MeshInstance3D
@@ -113,7 +113,7 @@ func _debug_car_mesh() -> void:
 	var resource_path := "<null>"
 	if mesh != null:
 		resource_path = mesh.resource_path
-		if mesh.has_method(&"get_surface_count"):
+		if mesh.has_method("get_surface_count"):
 			surfaces = mesh.get_surface_count()
 
 	var aabb := car_body.get_aabb() # local-space bounds
@@ -124,15 +124,19 @@ func _debug_car_mesh() -> void:
 	# This distinguishes "scene reference failed" vs "import/load failed".
 	var stl_path := "res://assets/vette-c1.stl"
 	var exists_any := ResourceLoader.exists(stl_path)
-	var exists_array_mesh := ResourceLoader.exists(stl_path, &"ArrayMesh")
+	var exists_array_mesh := ResourceLoader.exists(stl_path, "ArrayMesh")
 	var loaded_any := ResourceLoader.load(stl_path)
 	var loaded_any_type := "<null>"
+	var exists_mesh: bool = false
+	var loaded_mesh: Resource = null
+	var loaded_mesh_type := "<null>"
+
 	if loaded_any != null:
 		loaded_any_type = loaded_any.get_class()
 
-	var exists_mesh := ResourceLoader.exists(stl_path, &"Mesh")
-	var loaded_mesh := ResourceLoader.load(stl_path, &"Mesh")
-	var loaded_mesh_type := "<null>"
+	# Check Mesh availability even if loaded_any was null (be explicit)
+	exists_mesh = ResourceLoader.exists(stl_path, "Mesh")
+	loaded_mesh = ResourceLoader.load(stl_path, "Mesh")
 	if loaded_mesh != null:
 		loaded_mesh_type = loaded_mesh.get_class()
 
@@ -150,11 +154,11 @@ func _debug_car_mesh() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _clock_menu.visible and event.is_action_pressed(&"ui_cancel"):
+	if _clock_menu.visible and event.is_action_pressed("ui_cancel"):
 		_clock_menu.visible = false
 		get_viewport().set_input_as_handled()
 		return
-	if _stats_panel.visible and event.is_action_pressed(&"ui_cancel"):
+	if _stats_panel.visible and event.is_action_pressed("ui_cancel"):
 		_stats_panel.visible = false
 		get_viewport().set_input_as_handled()
 		return
@@ -200,8 +204,8 @@ func _try_interact(screen_pos: Vector2) -> void:
 	# Godot may return the collider node itself (e.g. `CollisionShape3D`) instead of its parent
 	# `StaticBody3D`. Walk up the tree until we find the interaction metadata.
 	while node != null:
-		if node.has_meta(&"garage_interact"):
-			_handle_interact(node.get_meta(&"garage_interact"))
+		if node.has_meta("garage_interact"):
+			_handle_interact(node.get_meta("garage_interact"))
 			return
 		node = node.get_parent()
 
@@ -217,11 +221,11 @@ func _raycast(screen_pos: Vector2) -> Dictionary:
 
 func _handle_interact(kind: Variant) -> void:
 	match kind:
-		&"clock":
+		"clock":
 			_clock_menu.visible = true
-		&"desk":
+		"desk":
 			_show_stats()
-		&"doors":
+		"doors":
 			get_tree().change_scene_to_file(GameState.SCENE_OPPONENT_SELECT)
 
 

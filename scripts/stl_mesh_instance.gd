@@ -46,6 +46,7 @@ func load_stl_into_mesh() -> void:
 	var key := "%s|center=%s|auto_scale_h=%s|manual_scale=%s|scale_mul=%s|apply_rot=%s|rot=%s" % [stl_path, center_model, auto_scale_to_height, manual_scale, scale_multiplier, apply_rotation, stl_rotation_degrees]
 	if _mesh_cache.has(key):
 		mesh = _mesh_cache[key]
+		_apply_material()
 		return
 
 	var abs_path := ProjectSettings.globalize_path(stl_path)
@@ -100,7 +101,7 @@ func load_stl_into_mesh() -> void:
 
 	# Apply transform to vertices (center/scale), then optionally rotate to desired orientation.
 	# Apply center/scale and rotation to vertices and normals
-	for i in vertices.size():
+	for i in range(vertices.size()):
 		var v := (vertices[i] - center) * scale
 		if apply_rotation:
 			v = _rotate_by_euler_degs(v, stl_rotation_degrees)
@@ -123,25 +124,7 @@ func load_stl_into_mesh() -> void:
 	mesh = m
 	_mesh_cache[key] = m
 
-	# Apply material override: prefer exported `car_material`, otherwise create a default
-	# material so the mesh isn't visibly unshaded/plain.
-	if car_material != null:
-		# Duplicate to avoid mutating the original resource in the inspector.
-		var mat := car_material.duplicate()
-		# If it's a StandardMaterial3D we can safely force alpha/transmission.
-		if mat is StandardMaterial3D:
-			mat.albedo_color.a = 1.0
-			# StandardMaterial3D in Godot 4 exposes `transmission`.
-			mat.transmission = 0.0
-		material_override = mat
-	else:
-		var default_mat := StandardMaterial3D.new()
-		default_mat.albedo_color = Color(0.15, 0.45, 0.85, 1)
-		default_mat.metallic = 0.6
-		default_mat.roughness = 0.35
-		# Disable any transmission for opacity
-		default_mat.transmission = 0.0
-		material_override = default_mat
+	_apply_material()
 
 	# Notify listeners that the mesh finished loading so other nodes (e.g. Garage)
 	# can react (align wheels, recalc bounds, etc.).
@@ -157,7 +140,23 @@ func load_stl_into_mesh() -> void:
 			" scale_mul=", scale_multiplier,
 			" center=", center,
 			" rot=", (stl_rotation_degrees if apply_rotation else Vector3.ZERO),
-			" surfaces=", (m.get_surface_count() if m.has_method(&"get_surface_count") else -1))
+			" surfaces=", (m.get_surface_count() if m.has_method("get_surface_count") else -1))
+
+
+func _apply_material() -> void:
+	if car_material != null:
+		var mat := car_material.duplicate()
+		if mat is StandardMaterial3D:
+			mat.albedo_color.a = 1.0
+			mat.transmission = 0.0
+		material_override = mat
+	else:
+		var default_mat := StandardMaterial3D.new()
+		default_mat.albedo_color = Color(0.15, 0.45, 0.85, 1)
+		default_mat.metallic = 0.6
+		default_mat.roughness = 0.35
+		default_mat.transmission = 0.0
+		material_override = default_mat
 
 
 func _looks_like_binary_stl(bytes: PackedByteArray, file_size: int) -> bool:
@@ -189,7 +188,7 @@ func _parse_binary_stl(bytes: PackedByteArray, vertices_out: PackedVector3Array,
 		var nz := spb.get_float()
 		var n := Vector3(nx, ny, nz)
 
-		for k in 3:
+		for k in range(3):
 			var x := spb.get_float()
 			var y := spb.get_float()
 			var z := spb.get_float()
