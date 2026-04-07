@@ -1,8 +1,7 @@
-[gd_scene load_steps=24 format=3 uid="uid://cp0x332xqk6tb"]
+[gd_scene load_steps=23 format=3 uid="uid://cp0x332xqk6tb"]
 
 [ext_resource type="Script" uid="uid://crltef3jr3jdl" path="res://scripts/garage.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/stl_mesh_instance.gd" id="2"]
-[ext_resource type="PackedScene" path="res://scenes/car.tscn" id="3"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 sky_top_color = Color(0.2, 0.25, 0.35, 1)
@@ -106,9 +105,32 @@ mesh = SubResource("FloorMesh")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
 shape = SubResource("FloorShape")
 
+[node name="CarPivot" type="Node3D" parent="."]
 
-[node name="Car" instance=ExtResource("3") parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+[node name="CarBody" type="MeshInstance3D" parent="CarPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+script = ExtResource("2")
+surface_material_override/0 = SubResource("CarBodyMat")
+
+[node name="WheelFrontLeft" type="MeshInstance3D" parent="CarPivot"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.75, 0.36, 1.6)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelFrontRight" type="MeshInstance3D" parent="CarPivot"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.75, 0.36, 1.6)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelBackLeft" type="MeshInstance3D" parent="CarPivot"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.75, 0.36, -1.6)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelBackRight" type="MeshInstance3D" parent="CarPivot"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.75, 0.36, -1.6)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
 
 [node name="InteractClock" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 2.8)
@@ -249,7 +271,7 @@ horizontal_alignment = 1
 
 [node name="StatsText" type="Label" parent="GarageUI/StatsPanel/Panel/Margin/VBox"]
 layout_mode = 2
-text = "â"
+text = "—"
 
 [node name="StatsClose" type="Button" parent="GarageUI/StatsPanel/Panel/Margin/VBox"]
 layout_mode = 2

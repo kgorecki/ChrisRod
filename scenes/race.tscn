@@ -1,10 +1,9 @@
-[gd_scene load_steps=21 format=3 uid="uid://13fdlkxeccj1"]
+[gd_scene load_steps=20 format=3 uid="uid://13fdlkxeccj1"]
 
 [ext_resource type="Script" uid="uid://dmsj4ekbiqrvr" path="res://scripts/race.gd" id="1"]
 [ext_resource type="Script" uid="uid://lmu5w71pep8v" path="res://scripts/player_race_car.gd" id="2"]
 [ext_resource type="Script" uid="uid://bl0i4wxc3dr8l" path="res://scripts/opponent_race_car.gd" id="3"]
 [ext_resource type="Script" path="res://scripts/stl_mesh_instance.gd" id="4"]
-[ext_resource type="PackedScene" path="res://scenes/car.tscn" id="5"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 sky_top_color = Color(0.25, 0.35, 0.55, 1)
@@ -94,9 +93,34 @@ collision_layer = 2
 collision_mask = 1
 script = ExtResource("2")
 
+[node name="MeshInstance3D" type="MeshInstance3D" parent="PlayerCar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.9)
+script = ExtResource("4")
+surface_material_override/0 = SubResource("CarMatP")
 
-[node name="CarVisual" instance=ExtResource("5") parent="PlayerCar"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PlayerCar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.9)
+shape = SubResource("CarShapeP")
+
+[node name="WheelFrontLeft" type="MeshInstance3D" parent="PlayerCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.65, -0.17, 3.5)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelFrontRight" type="MeshInstance3D" parent="PlayerCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.65, -0.17, 3.5)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelBackLeft" type="MeshInstance3D" parent="PlayerCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.65, -0.17, 0.3)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelBackRight" type="MeshInstance3D" parent="PlayerCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.65, -0.17, 0.3)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
 
 [node name="RaceCamera" type="Camera3D" parent="PlayerCar"]
 position = Vector3(0, 2.2, -8.5)
@@ -110,9 +134,34 @@ collision_layer = 2
 collision_mask = 1
 script = ExtResource("3")
 
+[node name="MeshInstance3D" type="MeshInstance3D" parent="OpponentCar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.9)
+script = ExtResource("4")
+surface_material_override/0 = SubResource("CarMatO")
 
-[node name="CarVisual" instance=ExtResource("5") parent="OpponentCar"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="OpponentCar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.9)
+shape = SubResource("CarShapeO")
+
+[node name="WheelFrontLeft" type="MeshInstance3D" parent="OpponentCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.65, -0.17, 3.5)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelFrontRight" type="MeshInstance3D" parent="OpponentCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.65, -0.17, 3.5)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelBackLeft" type="MeshInstance3D" parent="OpponentCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.65, -0.17, 0.3)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelBackRight" type="MeshInstance3D" parent="OpponentCar"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.65, -0.17, 0.3)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
 
 [node name="FinishLine" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 402.336)
@@ -181,7 +230,7 @@ theme_override_constants/separation = 6
 
 [node name="OppLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
 layout_mode = 2
-text = "Opponent: â"
+text = "Opponent: —"
 
 [node name="SpeedLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
 layout_mode = 2
@@ -189,7 +238,7 @@ text = "Speed: 0 km/h"
 
 [node name="DistLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
 layout_mode = 2
-text = "To finish: â"
+text = "To finish: —"
 
 [node name="TimeLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
 layout_mode = 2
@@ -197,7 +246,7 @@ text = "Time: 0.00 s"
 
 [node name="HintLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
 layout_mode = 2
-text = "W / Up: throttle Â· S / Down: brake Â· A/D or arrows: steer"
+text = "W / Up: throttle · S / Down: brake · A/D or arrows: steer"
 
 [node name="ResultPanel" type="Control" parent="RaceUI"]
 visible = false

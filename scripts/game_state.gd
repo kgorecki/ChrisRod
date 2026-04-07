@@ -13,10 +13,6 @@ var car_name: String = "Basic Car 1"
 ## Fixed stats (km/h and hp) for UI until tuning exists.
 var vmax_kmh: float = 220.0
 var engine_power_hp: float = 280.0
-## STL path for the player's car model.
-var selected_car_stl_path: String = "res://assets/vette-c1.stl"
-## Material for the player's car. Null means use the STL loader's default.
-var selected_car_material: StandardMaterial3D = null
 
 ## Last scene to restore (garage, opponent_select, race).
 var current_scene_path: String = SCENE_GARAGE
@@ -39,8 +35,6 @@ func new_game() -> void:
 	car_name = "Basic Car 1"
 	vmax_kmh = 220.0
 	engine_power_hp = 280.0
-	selected_car_stl_path = "res://assets/vette-c1.stl"
-	selected_car_material = null
 	current_scene_path = SCENE_GARAGE
 	selected_opponent_id = 0
 
