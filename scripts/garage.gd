@@ -7,6 +7,8 @@ extends Node3D
 
 @onready var _clock_menu: Control = $GarageUI/ClockMenu
 @onready var _stats_panel: Control = $GarageUI/StatsPanel
+@onready var _spray_menu: Control = $GarageUI/ColorPickerMenu
+@onready var _spray_color_picker: ColorPicker = $GarageUI/ColorPickerMenu/Panel/Margin/VBox/ColorPicker
 
 var _orbiting: bool = false
 var _yaw: float = 0.0
@@ -15,19 +17,19 @@ var _cam_distance: float = 7.0
 
 var _stats_label: Label
 
-# Single multiplier to scale all wheels from one place (editable in Inspector).
-# Default 1.5 chosen so wheels look correct for the current model out-of-the-box.
-@export var wheel_scale: float = 0.8
-
-
 func _ready() -> void:
 	GameState.current_scene_path = GameState.SCENE_GARAGE
 	_stats_label = _stats_panel.get_node("Panel/Margin/VBox/StatsText") as Label
 	_clock_menu.visible = false
 	_stats_panel.visible = false
+	_spray_menu.visible = false
 	$InteractClock.set_meta(&"garage_interact", &"clock")
 	$InteractDesk.set_meta(&"garage_interact", &"desk")
 	$InteractDoors.set_meta(&"garage_interact", &"doors")
+	$InteractSprayPistol.set_meta(&"garage_interact", &"spray")
+	# Apply stored paint color immediately (it will wait for the STL if needed).
+	if _car_pivot.has_method(&"set_car_body_color"):
+		_car_pivot.set_car_body_color(GameState.car_color)
 	_update_camera_transform()
 
 	# Defer so MeshInstance scripts (like the STL loader) have a chance
@@ -48,53 +50,9 @@ func _on_carbody_stl_loaded(mesh) -> void:
 
 
 func _align_wheels_to_floor() -> void:
-	# Compute floor top Y in world space from the Floor's MeshInstance3D AABB.
-	var floor_node := $Floor
-	var floor_mesh_instance := floor_node.get_node_or_null("MeshInstance3D") as MeshInstance3D
-	var floor_top_y := 0.0
-	if floor_mesh_instance != null and floor_mesh_instance.mesh != null:
-		var faabb := floor_mesh_instance.get_aabb()
-		# 8 corners
-		var minp := faabb.position
-		var maxp := faabb.position + faabb.size
-		var top_y := -INF
-		for x in [minp.x, maxp.x]:
-			for y in [minp.y, maxp.y]:
-				for z in [minp.z, maxp.z]:
-					var corner := Vector3(x, y, z)
-					var world := floor_mesh_instance.global_transform * corner
-					top_y = max(top_y, world.y)
-		floor_top_y = top_y
-	else:
-		# Fallback: assume floor top at y = 0
-		floor_top_y = 0.0
-
-	# Wheel node names
-	var wheel_names := ["WheelFrontLeft", "WheelFrontRight", "WheelBackLeft", "WheelBackRight"]
-	for name in wheel_names:
-		var wheel := _car_pivot.get_node_or_null(name) as MeshInstance3D
-		if wheel == null:
-			continue
-
-		# Apply uniform scale multiplier so wheel size can be adjusted from one variable.
-		wheel.scale = Vector3.ONE * wheel_scale
-		# Get wheel mesh AABB (local) and transform its corners to world to find bottom Y
-		var waabb := wheel.get_aabb()
-		var wmin := waabb.position
-		var wmax := waabb.position + waabb.size
-		var bottom_y := INF
-		for x in [wmin.x, wmax.x]:
-			for y in [wmin.y, wmax.y]:
-				for z in [wmin.z, wmax.z]:
-					var corner := Vector3(x, y, z)
-					var world := wheel.global_transform * corner
-					bottom_y = min(bottom_y, world.y)
-		# Compute delta to move so bottom_y == floor_top_y
-		var delta := floor_top_y - bottom_y
-		if abs(delta) > 0.0001:
-			var gp := wheel.global_position
-			gp.y += delta
-			wheel.global_position = gp
+	var floor_mesh_instance := $Floor/MeshInstance3D as MeshInstance3D
+	if _car_pivot.has_method(&"align_wheels_to_floor"):
+		_car_pivot.align_wheels_to_floor(floor_mesh_instance)
 
 func _process(_delta: float) -> void:
 	_camera_pivot.global_position = _car_pivot.global_position
@@ -158,6 +116,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_stats_panel.visible = false
 		get_viewport().set_input_as_handled()
 		return
+	if _spray_menu.visible and event.is_action_pressed(&"ui_cancel"):
+		_spray_menu.visible = false
+		get_viewport().set_input_as_handled()
+		return
 
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
@@ -166,7 +128,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			return
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-			if _clock_menu.visible or _stats_panel.visible:
+			if _clock_menu.visible or _stats_panel.visible or _spray_menu.visible:
 				return
 			_try_interact(mb.position)
 
@@ -223,6 +185,28 @@ func _handle_interact(kind: Variant) -> void:
 			_show_stats()
 		&"doors":
 			get_tree().change_scene_to_file(GameState.SCENE_OPPONENT_SELECT)
+		&"spray":
+			_show_spray_picker()
+
+
+func _show_spray_picker() -> void:
+	# Hide other garage overlays so clicks go to the picker.
+	_clock_menu.visible = false
+	_stats_panel.visible = false
+	_spray_color_picker.color = GameState.car_color
+	_spray_menu.visible = true
+
+
+func _on_spray_confirm_pressed() -> void:
+	GameState.car_color = _spray_color_picker.color
+	# Update the preview immediately.
+	if _car_pivot.has_method(&"set_car_body_color"):
+		_car_pivot.set_car_body_color(GameState.car_color)
+	_spray_menu.visible = false
+
+
+func _on_spray_cancel_pressed() -> void:
+	_spray_menu.visible = false
 
 
 func _show_stats() -> void:
