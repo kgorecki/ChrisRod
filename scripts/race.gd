@@ -44,10 +44,16 @@ func _ready() -> void:
 	_hud_opp.text = "Opponent: %s" % str(opp.get("name", "Rival"))
 	_traffic.visible = true
 	_refresh_traffic_lights()
+
+	# Apply the player's selected paint color to the shared car visuals.
+	var player_pivot := _player.get_node_or_null("CarPivot")
+	if player_pivot != null and player_pivot.has_method(&"set_car_body_color"):
+		player_pivot.set_car_body_color(GameState.car_color)
 	# Defer so the MeshInstance child scripts have a chance
 	# to populate `MeshInstance3D.mesh` before we inspect it.
 	call_deferred(&"_debug_car_mesh_resource_load")
 	call_deferred(&"_debug_car_mesh_instances")
+	call_deferred(&"_align_race_cars_to_ground")
 
 
 func is_race_started() -> bool:
@@ -76,12 +82,24 @@ func _debug_car_mesh_resource_load() -> void:
 		" loaded_type=", loaded_type)
 
 
+func _align_race_cars_to_ground() -> void:
+	var floor_mi := $Ground/MeshInstance3D as MeshInstance3D
+	for car in [_player, _opponent]:
+		var pivot: Node = car.get_node_or_null("CarPivot")
+		if pivot != null and pivot.has_method(&"align_wheels_to_floor"):
+			pivot.align_wheels_to_floor(floor_mi)
+
+
 func _debug_body_mesh_instances(body: Node, label: String) -> void:
 	if body == null:
 		print("[DEBUG CAR][race] Missing body for ", label)
 		return
 
-	for child in body.get_children():
+	_debug_mesh_instances_recursive(body, label)
+
+
+func _debug_mesh_instances_recursive(node: Node, label: String) -> void:
+	for child in node.get_children():
 		if child is MeshInstance3D:
 			var mi := child as MeshInstance3D
 			var mesh := mi.mesh
@@ -96,12 +114,13 @@ func _debug_body_mesh_instances(body: Node, label: String) -> void:
 			var center_local := aabb.position + aabb.size * 0.5
 			var center_world := mi.global_transform * center_local
 
-			print("[DEBUG CAR][race] ", label, " node=", mi.name, " visible=", mi.visible,
+			print("[DEBUG CAR][race] ", label, " node=", mi.get_path(), " visible=", mi.visible,
 				" mesh_null=", mesh == null,
 				" mesh_resource=", resource_path,
 				" surface_count=", surfaces,
 				" local_aabb_size=", aabb.size,
 				" center_world=", center_world)
+		_debug_mesh_instances_recursive(child, label)
 
 
 func _process(delta: float) -> void:

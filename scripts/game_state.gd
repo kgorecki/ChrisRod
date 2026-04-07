@@ -10,6 +10,8 @@ const SCENE_RACE := "res://scenes/race.tscn"
 
 ## Display name of the player's car.
 var car_name: String = "Basic Car 1"
+## Current paint color for the player's car.
+var car_color: Color = Color(0.15, 0.45, 0.85, 1.0)
 ## Fixed stats (km/h and hp) for UI until tuning exists.
 var vmax_kmh: float = 220.0
 var engine_power_hp: float = 280.0
@@ -33,6 +35,7 @@ func _ready() -> void:
 
 func new_game() -> void:
 	car_name = "Basic Car 1"
+	car_color = Color(0.15, 0.45, 0.85, 1.0)
 	vmax_kmh = 220.0
 	engine_power_hp = 280.0
 	current_scene_path = SCENE_GARAGE
@@ -47,6 +50,7 @@ func save_game() -> bool:
 	var data := {
 		"version": 1,
 		"car_name": car_name,
+		"car_color": [car_color.r, car_color.g, car_color.b, car_color.a],
 		"vmax_kmh": vmax_kmh,
 		"engine_power_hp": engine_power_hp,
 		"current_scene_path": current_scene_path,
@@ -75,6 +79,13 @@ func load_game() -> bool:
 		return false
 	var d: Dictionary = parsed
 	car_name = str(d.get("car_name", car_name))
+	var loaded_color: Variant = d.get("car_color", null)
+	if typeof(loaded_color) == TYPE_ARRAY and loaded_color.size() >= 3:
+		var r := float(loaded_color[0])
+		var g := float(loaded_color[1])
+		var b := float(loaded_color[2])
+		var a := float(loaded_color[3]) if loaded_color.size() >= 4 else 1.0
+		car_color = Color(r, g, b, a)
 	vmax_kmh = float(d.get("vmax_kmh", vmax_kmh))
 	engine_power_hp = float(d.get("engine_power_hp", engine_power_hp))
 	current_scene_path = str(d.get("current_scene_path", SCENE_GARAGE))

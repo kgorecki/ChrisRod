@@ -1,9 +1,9 @@
-[gd_scene load_steps=20 format=3 uid="uid://13fdlkxeccj1"]
+[gd_scene load_steps=14 format=3 uid="uid://13fdlkxeccj1"]
 
 [ext_resource type="Script" uid="uid://dmsj4ekbiqrvr" path="res://scripts/race.gd" id="1"]
 [ext_resource type="Script" uid="uid://lmu5w71pep8v" path="res://scripts/player_race_car.gd" id="2"]
 [ext_resource type="Script" uid="uid://bl0i4wxc3dr8l" path="res://scripts/opponent_race_car.gd" id="3"]
-[ext_resource type="Script" path="res://scripts/stl_mesh_instance.gd" id="4"]
+[ext_resource type="PackedScene" uid="uid://bqj8k2m4n5p6r" path="res://scenes/car_vehicle_visual.tscn" id="4"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 sky_top_color = Color(0.25, 0.35, 0.55, 1)
@@ -31,38 +31,16 @@ size = Vector3(40, 1, 520)
 [sub_resource type="BoxShape3D" id="GroundShape"]
 size = Vector3(40, 1, 520)
 
-[sub_resource type="StandardMaterial3D" id="CarMatP"]
-albedo_color = Color(0.2, 0.55, 0.95, 1)
-metallic = 0.35
-
-[sub_resource type="BoxMesh" id="CarMeshP"]
-material = SubResource("CarMatP")
-size = Vector3(1.6, 0.5, 3.8)
-
 [sub_resource type="BoxShape3D" id="CarShapeP"]
 size = Vector3(1.6, 0.5, 3.8)
 
 [sub_resource type="StandardMaterial3D" id="CarMatO"]
 albedo_color = Color(0.9, 0.25, 0.2, 1)
 metallic = 0.35
-
-[sub_resource type="BoxMesh" id="CarMeshO"]
-material = SubResource("CarMatO")
-size = Vector3(1.6, 0.5, 3.8)
+roughness = 0.35
 
 [sub_resource type="BoxShape3D" id="CarShapeO"]
 size = Vector3(1.6, 0.5, 3.8)
-
-[sub_resource type="CylinderMesh" id="WheelMesh"]
-top_radius = 0.18
-bottom_radius = 0.18
-height = 0.12
-radial_segments = 18
-
-[sub_resource type="StandardMaterial3D" id="WheelMat"]
-albedo_color = Color(0.08, 0.08, 0.08, 1)
-metallic = 0.1
-roughness = 0.85
 
 [sub_resource type="BoxShape3D" id="FinishShape"]
 size = Vector3(24, 8, 3)
@@ -93,34 +71,12 @@ collision_layer = 2
 collision_mask = 1
 script = ExtResource("2")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="PlayerCar"]
+[node name="CarPivot" parent="PlayerCar" instance=ExtResource("4")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.9)
-script = ExtResource("4")
-surface_material_override/0 = SubResource("CarMatP")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="PlayerCar"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.9)
 shape = SubResource("CarShapeP")
-
-[node name="WheelFrontLeft" type="MeshInstance3D" parent="PlayerCar"]
-transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.65, -0.17, 3.5)
-mesh = SubResource("WheelMesh")
-surface_material_override/0 = SubResource("WheelMat")
-
-[node name="WheelFrontRight" type="MeshInstance3D" parent="PlayerCar"]
-transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.65, -0.17, 3.5)
-mesh = SubResource("WheelMesh")
-surface_material_override/0 = SubResource("WheelMat")
-
-[node name="WheelBackLeft" type="MeshInstance3D" parent="PlayerCar"]
-transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.65, -0.17, 0.3)
-mesh = SubResource("WheelMesh")
-surface_material_override/0 = SubResource("WheelMat")
-
-[node name="WheelBackRight" type="MeshInstance3D" parent="PlayerCar"]
-transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.65, -0.17, 0.3)
-mesh = SubResource("WheelMesh")
-surface_material_override/0 = SubResource("WheelMat")
 
 [node name="RaceCamera" type="Camera3D" parent="PlayerCar"]
 position = Vector3(0, 2.2, -8.5)
@@ -134,34 +90,13 @@ collision_layer = 2
 collision_mask = 1
 script = ExtResource("3")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="OpponentCar"]
+[node name="CarPivot" parent="OpponentCar" instance=ExtResource("4")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.9)
-script = ExtResource("4")
-surface_material_override/0 = SubResource("CarMatO")
+body_paint = SubResource("CarMatO")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="OpponentCar"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.9)
 shape = SubResource("CarShapeO")
-
-[node name="WheelFrontLeft" type="MeshInstance3D" parent="OpponentCar"]
-transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.65, -0.17, 3.5)
-mesh = SubResource("WheelMesh")
-surface_material_override/0 = SubResource("WheelMat")
-
-[node name="WheelFrontRight" type="MeshInstance3D" parent="OpponentCar"]
-transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.65, -0.17, 3.5)
-mesh = SubResource("WheelMesh")
-surface_material_override/0 = SubResource("WheelMat")
-
-[node name="WheelBackLeft" type="MeshInstance3D" parent="OpponentCar"]
-transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.65, -0.17, 0.3)
-mesh = SubResource("WheelMesh")
-surface_material_override/0 = SubResource("WheelMat")
-
-[node name="WheelBackRight" type="MeshInstance3D" parent="OpponentCar"]
-transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.65, -0.17, 0.3)
-mesh = SubResource("WheelMesh")
-surface_material_override/0 = SubResource("WheelMat")
 
 [node name="FinishLine" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 402.336)

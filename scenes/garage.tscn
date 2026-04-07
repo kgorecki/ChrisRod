@@ -1,7 +1,7 @@
-[gd_scene load_steps=23 format=3 uid="uid://cp0x332xqk6tb"]
+[gd_scene format=3 uid="uid://cp0x332xqk6tb"]
 
 [ext_resource type="Script" uid="uid://crltef3jr3jdl" path="res://scripts/garage.gd" id="1"]
-[ext_resource type="Script" path="res://scripts/stl_mesh_instance.gd" id="2"]
+[ext_resource type="PackedScene" uid="uid://bqj8k2m4n5p6r" path="res://scenes/car_vehicle_visual.tscn" id="2"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 sky_top_color = Color(0.2, 0.25, 0.35, 1)
@@ -28,30 +28,6 @@ size = Vector3(24, 0.3, 24)
 
 [sub_resource type="BoxShape3D" id="FloorShape"]
 size = Vector3(24, 0.3, 24)
-
-[sub_resource type="StandardMaterial3D" id="CarBodyMat"]
-albedo_color = Color(0.15, 0.45, 0.85, 1)
-metallic = 0.4
-roughness = 0.35
-
-[sub_resource type="BoxMesh" id="CarBodyMesh"]
-material = SubResource("CarBodyMat")
-size = Vector3(1.8, 0.55, 4.2)
-
-[sub_resource type="BoxMesh" id="CarRoofMesh"]
-material = SubResource("CarBodyMat")
-size = Vector3(1.5, 0.4, 2.4)
-
-[sub_resource type="CylinderMesh" id="WheelMesh"]
-top_radius = 0.36
-bottom_radius = 0.36
-height = 0.24
-radial_segments = 18
-
-[sub_resource type="StandardMaterial3D" id="WheelMat"]
-albedo_color = Color(0.08, 0.08, 0.08, 1)
-metallic = 0.1
-roughness = 0.85
 
 [sub_resource type="CylinderMesh" id="ClockMesh"]
 top_radius = 0.55
@@ -85,97 +61,94 @@ metallic = 0.2
 [sub_resource type="BoxShape3D" id="DoorShape"]
 size = Vector3(6, 3.2, 0.25)
 
-[node name="Garage" type="Node3D"]
+[sub_resource type="BoxMesh" id="SprayMesh"]
+size = Vector3(0.18, 0.38, 0.08)
+
+[sub_resource type="StandardMaterial3D" id="SprayMat"]
+albedo_color = Color(0.17261633, 0.047378488, 0.99999994, 1)
+metallic = 0.8
+metallic_specular = 0.92
+roughness = 0.4
+
+[sub_resource type="BoxShape3D" id="SprayShape"]
+size = Vector3(0.18, 0.38, 0.08)
+
+[node name="Garage" type="Node3D" unique_id=3918559]
 script = ExtResource("1")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=35370019]
 environment = SubResource("Env1")
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1236810909]
 transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 4, 10, 6)
 light_energy = 1.15
 shadow_enabled = true
 
-[node name="Floor" type="StaticBody3D" parent="."]
+[node name="Floor" type="StaticBody3D" parent="." unique_id=1854814397]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.15, 0)
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Floor"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Floor" unique_id=1102137988]
 mesh = SubResource("FloorMesh")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor" unique_id=1435707338]
 shape = SubResource("FloorShape")
 
-[node name="CarPivot" type="Node3D" parent="."]
+[node name="CarPivot" parent="." unique_id=33668058 instance=ExtResource("2")]
 
-[node name="CarBody" type="MeshInstance3D" parent="CarPivot"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
-script = ExtResource("2")
-surface_material_override/0 = SubResource("CarBodyMat")
-
-[node name="WheelFrontLeft" type="MeshInstance3D" parent="CarPivot"]
-transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.75, 0.36, 1.6)
-mesh = SubResource("WheelMesh")
-surface_material_override/0 = SubResource("WheelMat")
-
-[node name="WheelFrontRight" type="MeshInstance3D" parent="CarPivot"]
-transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.75, 0.36, 1.6)
-mesh = SubResource("WheelMesh")
-surface_material_override/0 = SubResource("WheelMat")
-
-[node name="WheelBackLeft" type="MeshInstance3D" parent="CarPivot"]
-transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.75, 0.36, -1.6)
-mesh = SubResource("WheelMesh")
-surface_material_override/0 = SubResource("WheelMat")
-
-[node name="WheelBackRight" type="MeshInstance3D" parent="CarPivot"]
-transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.75, 0.36, -1.6)
-mesh = SubResource("WheelMesh")
-surface_material_override/0 = SubResource("WheelMat")
-
-[node name="InteractClock" type="StaticBody3D" parent="."]
+[node name="InteractClock" type="StaticBody3D" parent="." unique_id=1650387631]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 2.8)
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="InteractClock"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="InteractClock" unique_id=736530381]
 transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 11.1115, 0, -1.51501)
 mesh = SubResource("ClockMesh")
 surface_material_override/0 = SubResource("ClockMat")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractClock"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractClock" unique_id=1350643422]
 transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 11.1115, 0, -1.51501)
 shape = SubResource("ClockShape")
 
-[node name="InteractDesk" type="StaticBody3D" parent="."]
+[node name="InteractDesk" type="StaticBody3D" parent="." unique_id=691586932]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.2, 0.45, 1.2)
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="InteractDesk"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="InteractDesk" unique_id=213402081]
 mesh = SubResource("DeskMesh")
 surface_material_override/0 = SubResource("DeskMat")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk" unique_id=864220574]
 shape = SubResource("DeskShape")
 
-[node name="InteractDoors" type="StaticBody3D" parent="."]
+[node name="InteractDoors" type="StaticBody3D" parent="." unique_id=1496841617]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, -7.2)
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="InteractDoors"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="InteractDoors" unique_id=2028609411]
 mesh = SubResource("DoorMesh")
 surface_material_override/0 = SubResource("DoorMat")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDoors"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDoors" unique_id=1361924605]
 shape = SubResource("DoorShape")
 
-[node name="CameraPivot" type="Node3D" parent="."]
+[node name="InteractSprayPistol" type="StaticBody3D" parent="." unique_id=753276932]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.55, -6)
 
-[node name="Pitch" type="Node3D" parent="CameraPivot"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="InteractSprayPistol" unique_id=867806488]
+mesh = SubResource("SprayMesh")
+surface_material_override/0 = SubResource("SprayMat")
 
-[node name="Camera3D" type="Camera3D" parent="CameraPivot/Pitch"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractSprayPistol" unique_id=672364029]
+shape = SubResource("SprayShape")
+
+[node name="CameraPivot" type="Node3D" parent="." unique_id=82855066]
+
+[node name="Pitch" type="Node3D" parent="CameraPivot" unique_id=596518301]
+
+[node name="Camera3D" type="Camera3D" parent="CameraPivot/Pitch" unique_id=1752500865]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 7)
 current = true
 fov = 55.0
 
-[node name="GarageUI" type="CanvasLayer" parent="."]
+[node name="GarageUI" type="CanvasLayer" parent="." unique_id=904809540]
 
-[node name="ClockMenu" type="Control" parent="GarageUI"]
+[node name="ClockMenu" type="Control" parent="GarageUI" unique_id=622125605]
 visible = false
 layout_mode = 3
 anchors_preset = 15
@@ -184,7 +157,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Panel" type="PanelContainer" parent="GarageUI/ClockMenu"]
+[node name="Panel" type="PanelContainer" parent="GarageUI/ClockMenu" unique_id=1365920077]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -198,39 +171,39 @@ offset_bottom = 120.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Margin" type="MarginContainer" parent="GarageUI/ClockMenu/Panel"]
+[node name="Margin" type="MarginContainer" parent="GarageUI/ClockMenu/Panel" unique_id=706326867]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="VBox" type="VBoxContainer" parent="GarageUI/ClockMenu/Panel/Margin"]
+[node name="VBox" type="VBoxContainer" parent="GarageUI/ClockMenu/Panel/Margin" unique_id=267214564]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="Title" type="Label" parent="GarageUI/ClockMenu/Panel/Margin/VBox"]
+[node name="Title" type="Label" parent="GarageUI/ClockMenu/Panel/Margin/VBox" unique_id=243301436]
 layout_mode = 2
 text = "Garage menu"
 horizontal_alignment = 1
 
-[node name="SaveBtn" type="Button" parent="GarageUI/ClockMenu/Panel/Margin/VBox"]
+[node name="SaveBtn" type="Button" parent="GarageUI/ClockMenu/Panel/Margin/VBox" unique_id=700487545]
 layout_mode = 2
 text = "Save game"
 
-[node name="LoadBtn" type="Button" parent="GarageUI/ClockMenu/Panel/Margin/VBox"]
+[node name="LoadBtn" type="Button" parent="GarageUI/ClockMenu/Panel/Margin/VBox" unique_id=1416030417]
 layout_mode = 2
 text = "Load game"
 
-[node name="QuitBtn" type="Button" parent="GarageUI/ClockMenu/Panel/Margin/VBox"]
+[node name="QuitBtn" type="Button" parent="GarageUI/ClockMenu/Panel/Margin/VBox" unique_id=630363616]
 layout_mode = 2
 text = "Quit to main menu"
 
-[node name="CloseBtn" type="Button" parent="GarageUI/ClockMenu/Panel/Margin/VBox"]
+[node name="CloseBtn" type="Button" parent="GarageUI/ClockMenu/Panel/Margin/VBox" unique_id=1735926327]
 layout_mode = 2
 text = "Close"
 
-[node name="StatsPanel" type="Control" parent="GarageUI"]
+[node name="StatsPanel" type="Control" parent="GarageUI" unique_id=1655883850]
 visible = false
 layout_mode = 3
 anchors_preset = 15
@@ -239,7 +212,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Panel" type="PanelContainer" parent="GarageUI/StatsPanel"]
+[node name="Panel" type="PanelContainer" parent="GarageUI/StatsPanel" unique_id=1324190942]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -253,32 +226,88 @@ offset_bottom = 100.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Margin" type="MarginContainer" parent="GarageUI/StatsPanel/Panel"]
+[node name="Margin" type="MarginContainer" parent="GarageUI/StatsPanel/Panel" unique_id=316004550]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="VBox" type="VBoxContainer" parent="GarageUI/StatsPanel/Panel/Margin"]
+[node name="VBox" type="VBoxContainer" parent="GarageUI/StatsPanel/Panel/Margin" unique_id=1671768042]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="StatsTitle" type="Label" parent="GarageUI/StatsPanel/Panel/Margin/VBox"]
+[node name="StatsTitle" type="Label" parent="GarageUI/StatsPanel/Panel/Margin/VBox" unique_id=363821189]
 layout_mode = 2
 text = "Car statistics"
 horizontal_alignment = 1
 
-[node name="StatsText" type="Label" parent="GarageUI/StatsPanel/Panel/Margin/VBox"]
+[node name="StatsText" type="Label" parent="GarageUI/StatsPanel/Panel/Margin/VBox" unique_id=295640121]
 layout_mode = 2
 text = "—"
 
-[node name="StatsClose" type="Button" parent="GarageUI/StatsPanel/Panel/Margin/VBox"]
+[node name="StatsClose" type="Button" parent="GarageUI/StatsPanel/Panel/Margin/VBox" unique_id=494461110]
 layout_mode = 2
 text = "Close"
+
+[node name="ColorPickerMenu" type="Control" parent="GarageUI" unique_id=1600403448]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="GarageUI/ColorPickerMenu" unique_id=840747728]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -230.0
+offset_top = -160.0
+offset_right = 230.0
+offset_bottom = 160.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="GarageUI/ColorPickerMenu/Panel" unique_id=1298191547]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="GarageUI/ColorPickerMenu/Panel/Margin" unique_id=1421428037]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="GarageUI/ColorPickerMenu/Panel/Margin/VBox" unique_id=1286796239]
+layout_mode = 2
+text = "Spray paint"
+horizontal_alignment = 1
+
+[node name="ColorPicker" type="ColorPicker" parent="GarageUI/ColorPickerMenu/Panel/Margin/VBox" unique_id=1775900923]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HBox" type="HBoxContainer" parent="GarageUI/ColorPickerMenu/Panel/Margin/VBox" unique_id=1910732739]
+layout_mode = 2
+
+[node name="ConfirmBtn" type="Button" parent="GarageUI/ColorPickerMenu/Panel/Margin/VBox/HBox" unique_id=1296032446]
+layout_mode = 2
+text = "Apply"
+
+[node name="CancelBtn" type="Button" parent="GarageUI/ColorPickerMenu/Panel/Margin/VBox/HBox" unique_id=257572830]
+layout_mode = 2
+text = "Cancel"
 
 [connection signal="pressed" from="GarageUI/ClockMenu/Panel/Margin/VBox/SaveBtn" to="." method="_on_clock_save_pressed"]
 [connection signal="pressed" from="GarageUI/ClockMenu/Panel/Margin/VBox/LoadBtn" to="." method="_on_clock_load_pressed"]
 [connection signal="pressed" from="GarageUI/ClockMenu/Panel/Margin/VBox/QuitBtn" to="." method="_on_clock_quit_menu_pressed"]
 [connection signal="pressed" from="GarageUI/ClockMenu/Panel/Margin/VBox/CloseBtn" to="." method="_on_clock_close_pressed"]
 [connection signal="pressed" from="GarageUI/StatsPanel/Panel/Margin/VBox/StatsClose" to="." method="_on_stats_close_pressed"]
+[connection signal="pressed" from="GarageUI/ColorPickerMenu/Panel/Margin/VBox/HBox/ConfirmBtn" to="." method="_on_spray_confirm_pressed"]
+[connection signal="pressed" from="GarageUI/ColorPickerMenu/Panel/Margin/VBox/HBox/CancelBtn" to="." method="_on_spray_cancel_pressed"]

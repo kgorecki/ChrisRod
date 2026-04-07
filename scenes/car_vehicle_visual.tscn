@@ -1,0 +1,49 @@
+[gd_scene load_steps=6 format=3 uid="uid://bqj8k2m4n5p6r"]
+
+[ext_resource type="Script" path="res://scripts/car_vehicle_visual.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/stl_mesh_instance.gd" id="2"]
+
+[sub_resource type="StandardMaterial3D" id="CarBodyMat"]
+albedo_color = Color(0.15, 0.45, 0.85, 1)
+metallic = 0.4
+roughness = 0.35
+
+[sub_resource type="CylinderMesh" id="WheelMesh"]
+top_radius = 0.36
+bottom_radius = 0.36
+height = 0.24
+radial_segments = 18
+
+[sub_resource type="StandardMaterial3D" id="WheelMat"]
+albedo_color = Color(0.08, 0.08, 0.08, 1)
+metallic = 0.1
+roughness = 0.85
+
+[node name="CarPivot" type="Node3D"]
+script = ExtResource("1")
+wheel_scale = 0.8
+
+[node name="CarBody" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+script = ExtResource("2")
+car_material = SubResource("CarBodyMat")
+
+[node name="WheelFrontLeft" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.75, 0.36, 1.6)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelFrontRight" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.75, 0.36, 1.6)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelBackLeft" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, -0.75, 0.36, -1.6)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
+
+[node name="WheelBackRight" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0.75, 0.36, -1.6)
+mesh = SubResource("WheelMesh")
+surface_material_override/0 = SubResource("WheelMat")
