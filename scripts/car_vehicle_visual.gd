@@ -3,7 +3,7 @@ extends Node3D
 ## Shared car visuals (STL body, wheels, materials) used by garage and race.
 ## Defaults match `garage.tscn` / `car_vehicle_visual.tscn`.
 
-@export var wheel_scale: float = 0.8
+@export var wheel_scale: float = 1
 ## When set (e.g. opponent), applied to the car body after the STL mesh loads.
 @export var body_paint: StandardMaterial3D
 

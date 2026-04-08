@@ -94,6 +94,7 @@ mesh = SubResource("FloorMesh")
 shape = SubResource("FloorShape")
 
 [node name="CarPivot" parent="." unique_id=33668058 instance=ExtResource("2")]
+wheel_scale = 1.0
 
 [node name="InteractClock" type="StaticBody3D" parent="." unique_id=1650387631]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 2.8)

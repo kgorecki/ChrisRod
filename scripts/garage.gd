@@ -14,6 +14,15 @@ var _orbiting: bool = false
 var _yaw: float = 0.0
 var _pitch: float = 0.35
 var _cam_distance: float = 7.0
+var _cam_distance_target: float = 7.0
+
+# Camera zoom limits (mouse wheel + pinch).
+const CAM_DISTANCE_MIN := 2.5
+const CAM_DISTANCE_MAX := 20.0
+const ZOOM_STEP := 0.75
+const PINCH_SENSITIVITY := 1.5
+# How quickly we interpolate camera distance (higher = snappier).
+const ZOOM_SMOOTH_SPEED := 12.0
 
 var _stats_label: Label
 
@@ -30,6 +39,7 @@ func _ready() -> void:
 	# Apply stored paint color immediately (it will wait for the STL if needed).
 	if _car_pivot.has_method(&"set_car_body_color"):
 		_car_pivot.set_car_body_color(GameState.car_color)
+	_cam_distance_target = _cam_distance
 	_update_camera_transform()
 
 	# Defer so MeshInstance scripts (like the STL loader) have a chance
@@ -56,6 +66,16 @@ func _align_wheels_to_floor() -> void:
 
 func _process(_delta: float) -> void:
 	_camera_pivot.global_position = _car_pivot.global_position
+
+	# Smooth zoom: interpolate distance toward the latest target.
+	# (We don't call `_update_camera_transform()` from input handlers so
+	# mouse wheel / pinch stays smooth.)
+	var delta := _delta
+	if absf(_cam_distance - _cam_distance_target) > 0.0001:
+		# Exponential smoothing: t = 1 - exp(-k*dt)
+		var t := 1.0 - exp(-ZOOM_SMOOTH_SPEED * delta)
+		_cam_distance = lerpf(_cam_distance, _cam_distance_target, t)
+		_update_camera_transform()
 
 
 func _debug_car_mesh() -> void:
@@ -121,10 +141,45 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 
+	# Pinch gesture zoom (touch / trackpad).
+	if event is InputEventMagnifyGesture:
+		if _clock_menu.visible or _stats_panel.visible or _spray_menu.visible:
+			return
+		var mg := event as InputEventMagnifyGesture
+		# `factor` grows when fingers spread (zoom in).
+		var denom := 1.0 + (mg.factor * PINCH_SENSITIVITY)
+		if absf(denom) < 0.0001:
+			return
+		_cam_distance_target = clampf(_cam_distance_target / denom, CAM_DISTANCE_MIN, CAM_DISTANCE_MAX)
+		get_viewport().set_input_as_handled()
+		return
+
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_RIGHT:
 			_orbiting = mb.pressed
+			get_viewport().set_input_as_handled()
+			return
+		# Mouse wheel: use `factor` when available so trackpads behave better.
+		if mb.button_index == MOUSE_BUTTON_WHEEL_UP or mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			var factor_any: Variant = mb.get(&"factor") # May be missing depending on platform/version.
+			var raw_factor: float = 1.0
+			if typeof(factor_any) == TYPE_FLOAT or typeof(factor_any) == TYPE_INT:
+				raw_factor = float(factor_any)
+			var factor := absf(raw_factor)
+			if factor < 0.0001:
+				factor = 1.0
+
+			var dir := -1.0 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0
+			# Some platforms encode scroll direction in `factor`; if the sign disagrees,
+			# flip the direction so zoom in/out is consistent.
+			if raw_factor < 0.0:
+				dir *= -1.0
+			_cam_distance_target = clampf(
+				_cam_distance_target + dir * ZOOM_STEP * factor,
+				CAM_DISTANCE_MIN,
+				CAM_DISTANCE_MAX
+			)
 			get_viewport().set_input_as_handled()
 			return
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
