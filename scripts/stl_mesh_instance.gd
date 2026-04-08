@@ -1,57 +1,40 @@
 extends MeshInstance3D
 
-## Runtime STL loader for Godot projects where the STL importer is unavailable.
-## It parses both binary and ASCII STL and builds an `ArrayMesh` at runtime.
+## Runtime STL/GLB loader for Godot projects.
+## Handles binary and ASCII STL and also instantiates GLB/GLTF scenes at runtime.
 
-@export var stl_path: String = "res://assets/vette-c1.stl"
+@export var stl_path: String = "res://assets/c-1962.glb"
 @export var center_model: bool = true
-@export var auto_scale_to_height: float = 4.5 # meters; set <= 0 to disable
+@export var auto_scale_to_height: float = 5 # meters; set <= 0 to disable
 @export var manual_scale: float = 1.0
 @export var print_debug: bool = true
-
-# Extra multiplier applied after auto/manual scale; useful to quickly enlarge/shrink.
 @export var scale_multiplier: float = 1.0
-
-# Optional rotation (degrees) applied to the model after centering/scaling.
-# Useful when an STL's up-axis differs from the project's up-axis (e.g. model is vertical).
 @export var apply_rotation: bool = true
-@export var stl_rotation_degrees: Vector3 = Vector3(-90.0, 0.0, 0.0) # default: rotate -90° on X to lay model horizontally
-
-signal stl_loaded(mesh)
-
-# Optional material to apply to the loaded mesh. If left empty a default
-# StandardMaterial3D will be created and used.
+@export var stl_rotation_degrees: Vector3 = Vector3(0.0, 0.0, 0.0)
 @export var car_material: StandardMaterial3D
+
+signal stl_loaded(mesh_or_node)
 
 static var _mesh_cache: Dictionary = {} # key -> ArrayMesh
 
-
-func _rotate_by_euler_degs(vec: Vector3, degs: Vector3) -> Vector3:
-	# Rotate a vector by Euler angles (degrees) around X, then Y, then Z.
-	var r := degs * (PI / 180.0)
-	if r.x != 0.0:
-		vec = vec.rotated(Vector3(1, 0, 0), r.x)
-	if r.y != 0.0:
-		vec = vec.rotated(Vector3(0, 1, 0), r.y)
-	if r.z != 0.0:
-		vec = vec.rotated(Vector3(0, 0, 1), r.z)
-	return vec
-
-
 func _ready() -> void:
-	load_stl_into_mesh()
+	load_model()
+
+
+func load_model() -> void:
+	if stl_path.ends_with(".stl"):
+		load_stl_into_mesh()
+	elif stl_path.ends_with(".glb") or stl_path.ends_with(".gltf"):
+		load_glb_scene()
+	else:
+		push_warning("[STL/GLB] Unsupported file format: " + stl_path)
 
 
 func _apply_material_override() -> void:
-	# Apply material override per MeshInstance3D instance.
-	# (Important for cached meshes: `mesh` can be shared, but `material_override` is not.)
 	if car_material != null:
-		# Duplicate to avoid mutating the original resource in the inspector.
 		var mat := car_material.duplicate()
-		# If it's a StandardMaterial3D we can safely force alpha/transmission.
 		if mat is StandardMaterial3D:
 			(mat as StandardMaterial3D).albedo_color.a = 1.0
-			# StandardMaterial3D in Godot 4 exposes `transmission`.
 			(mat as StandardMaterial3D).transmission = 0.0
 		material_override = mat
 	else:
@@ -59,17 +42,17 @@ func _apply_material_override() -> void:
 		default_mat.albedo_color = Color(0.15, 0.45, 0.85, 1)
 		default_mat.metallic = 0.6
 		default_mat.roughness = 0.35
-		# Disable any transmission for opacity
 		default_mat.transmission = 0.0
 		material_override = default_mat
 
+
+# ---------------------- STL Loading ----------------------
 
 func load_stl_into_mesh() -> void:
 	var key := "%s|center=%s|auto_scale_h=%s|manual_scale=%s|scale_mul=%s|apply_rot=%s|rot=%s" % [stl_path, center_model, auto_scale_to_height, manual_scale, scale_multiplier, apply_rotation, stl_rotation_degrees]
 	if _mesh_cache.has(key):
 		mesh = _mesh_cache[key]
 		_apply_material_override()
-		# Let listeners (e.g. car visual scripts) know the mesh is available.
 		emit_signal("stl_loaded", mesh)
 		if print_debug:
 			print("[STL] Loaded from cache:", stl_path, " key=", key)
@@ -77,7 +60,7 @@ func load_stl_into_mesh() -> void:
 
 	var abs_path := ProjectSettings.globalize_path(stl_path)
 	if not FileAccess.file_exists(abs_path):
-		push_warning("[STL] File not found: " + stl_path + " (abs: " + abs_path + ")")
+		push_warning("[STL] File not found: " + stl_path)
 		return
 
 	var file := FileAccess.open(abs_path, FileAccess.READ)
@@ -118,15 +101,12 @@ func load_stl_into_mesh() -> void:
 	if auto_scale_to_height > 0.0 and height > 0.000001:
 		scale = auto_scale_to_height / height
 
-	# Apply user multiplier
 	scale *= scale_multiplier
 
 	var center := Vector3.ZERO
 	if center_model:
 		center = (min_v + max_v) * 0.5
 
-	# Apply transform to vertices (center/scale), then optionally rotate to desired orientation.
-	# Apply center/scale and rotation to vertices and normals
 	for i in vertices.size():
 		var v := (vertices[i] - center) * scale
 		if apply_rotation:
@@ -149,28 +129,94 @@ func load_stl_into_mesh() -> void:
 
 	mesh = m
 	_mesh_cache[key] = m
-
 	_apply_material_override()
-
-	# Notify listeners that the mesh finished loading so other nodes (e.g. Garage)
-	# can react (align wheels, recalc bounds, etc.).
 	emit_signal("stl_loaded", m)
 
 	if print_debug:
-		print("[STL] Loaded:", stl_path,
-			" binary=", is_binary,
-			" verts=", vertices.size(),
-			" min=", min_v, " max=", max_v,
-			" height=", height,
-			" scale=", scale,
-			" scale_mul=", scale_multiplier,
-			" center=", center,
-			" rot=", (stl_rotation_degrees if apply_rotation else Vector3.ZERO),
-			" surfaces=", (m.get_surface_count() if m.has_method(&"get_surface_count") else -1))
+		print("[STL] Loaded:", stl_path, " verts=", vertices.size(), " height=", height, " scale=", scale)
 
+
+# ---------------------- GLB Loading ----------------------
+
+func load_glb_scene() -> void:
+	var glb_res = load(stl_path)
+	if glb_res == null:
+		push_warning("[GLB] Failed to load: " + stl_path)
+		return
+
+	var inst = glb_res.instantiate()
+	if inst == null:
+		push_warning("[GLB] Failed to instance: " + stl_path)
+		return
+
+	add_child(inst)
+
+	var bbox := get_aabb_recursive(inst)
+
+	# Auto scale
+	if auto_scale_to_height > 0:
+		var height = bbox.size.y
+		if height > 0.0001:
+			var scale_factor = auto_scale_to_height / height * scale_multiplier
+			inst.scale = inst.scale * scale_factor
+			bbox = get_aabb_recursive(inst)
+
+	# Rotation
+	if apply_rotation:
+		inst.rotate_x(deg_to_rad(stl_rotation_degrees.x))
+		inst.rotate_y(deg_to_rad(stl_rotation_degrees.y))
+		inst.rotate_z(deg_to_rad(stl_rotation_degrees.z))
+		bbox = get_aabb_recursive(inst)
+
+	# Move to ground
+	var min_y = get_min_y_global(inst) * 50
+	print_debug("[DEBUG GLB][stl_mesh_loader] min_y=", min_y)
+	inst.translate(Vector3(0, -min_y, 0))
+
+	#if print_debug:
+		#print("[GLB] Loaded:", stl_path, " scale:", inst.scale, " ground_offset:", offset_y)
+
+	emit_signal("stl_loaded", inst)
+
+# ---------------------- Helpers ----------------------
+
+func get_min_y_global(node: Node3D) -> float:
+	var min_y: float = INF
+	if node is MeshInstance3D and node.mesh != null:
+		var mesh_aabb: AABB = node.mesh.get_aabb() # jawny typ
+		# Przelicz lokalny AABB na globalne współrzędne
+		var global_min: Vector3 = node.global_transform.origin + node.global_transform.basis * mesh_aabb.position
+		min_y = min(min_y, global_min.y)
+	for child in node.get_children():
+		if child is Node3D:
+			min_y = min(min_y, get_min_y_global(child))
+	return min_y
+	
+func get_aabb_recursive(node: Node3D) -> AABB:
+	var aabb := AABB() # pusty
+	if node is MeshInstance3D and node.mesh != null:
+		aabb = node.mesh.get_aabb()
+		aabb.position = node.global_transform.origin # dopasuj do pozycji node
+	for child in node.get_children():
+		if child is Node3D:
+			var child_aabb := get_aabb_recursive(child)
+			if aabb.size == Vector3.ZERO:
+				aabb = child_aabb
+			else:
+				aabb = aabb.merge(child_aabb)
+	return aabb
+
+func _rotate_by_euler_degs(vec: Vector3, degs: Vector3) -> Vector3:
+	var r := degs * (PI / 180.0)
+	if r.x != 0.0:
+		vec = vec.rotated(Vector3(1, 0, 0), r.x)
+	if r.y != 0.0:
+		vec = vec.rotated(Vector3(0, 1, 0), r.y)
+	if r.z != 0.0:
+		vec = vec.rotated(Vector3(0, 0, 1), r.z)
+	return vec
 
 func _looks_like_binary_stl(bytes: PackedByteArray, file_size: int) -> bool:
-	# Binary STL header is 80 bytes + uint32 triangle count + 50 bytes per triangle.
 	if bytes.size() < 84:
 		return false
 	var tri_count := _read_u32_le(bytes, 80)
