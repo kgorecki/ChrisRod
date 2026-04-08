@@ -24,36 +24,39 @@ car_material = SubResource("CarBodyMat")
 
 [node name="WheelFrontLeft" type="MeshInstance3D" parent="." unique_id=226525138]
 transform = Transform3D(0, -1, 0, 0, 0, -1, 1, 0, 0, -0.75, 0.36, 1.6)
+visible = false
 script = ExtResource("2")
-stl_path = "res://assets/wheel-c1.stl"
+stl_path = "res://assets/wheel-c1.glb"
 auto_scale_to_height = 0.5
 print_debug = false
-stl_rotation_degrees = Vector3(0, 0, 90)
-car_material = SubResource("WheelMat")
+stl_rotation_degrees = Vector3(0, 180, 90)
 
 [node name="WheelFrontRight" type="MeshInstance3D" parent="." unique_id=1403193221]
 transform = Transform3D(0, -1, 0, 0, 0, -1, 1, 0, 0, 0.75, 0.36, 1.6)
+visible = false
 script = ExtResource("2")
-stl_path = "res://assets/wheel-c1.stl"
+stl_path = "res://assets/wheel-c1.glb"
 auto_scale_to_height = 0.5
 print_debug = false
-stl_rotation_degrees = Vector3(0, 0, -90)
+stl_rotation_degrees = Vector3(0, 180, -90)
 car_material = SubResource("WheelMat")
 
 [node name="WheelBackLeft" type="MeshInstance3D" parent="." unique_id=1555115288]
 transform = Transform3D(0, -1, 0, 0, 0, -1, 1, 0, 0, -0.75, 0.36, -1.6)
+visible = false
 script = ExtResource("2")
-stl_path = "res://assets/wheel-c1.stl"
+stl_path = "res://assets/wheel-c1.glb"
 auto_scale_to_height = 0.5
 print_debug = false
-stl_rotation_degrees = Vector3(0, 0, 90)
+stl_rotation_degrees = Vector3(0, 180, 90)
 car_material = SubResource("WheelMat")
 
 [node name="WheelBackRight" type="MeshInstance3D" parent="." unique_id=136591371]
 transform = Transform3D(0, -1, 0, 0, 0, -1, 1, 0, 0, 0.75, 0.36, -1.6)
+visible = false
 script = ExtResource("2")
-stl_path = "res://assets/wheel-c1.stl"
+stl_path = "res://assets/wheel-c1.glb"
 auto_scale_to_height = 0.5
 print_debug = false
-stl_rotation_degrees = Vector3(0, 0, -90)
+stl_rotation_degrees = Vector3(0, 180, -90)
 car_material = SubResource("WheelMat")
