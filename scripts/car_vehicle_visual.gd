@@ -7,12 +7,13 @@ extends Node3D
 ## When set (e.g. opponent), applied to the car body after the STL mesh loads.
 @export var body_paint: StandardMaterial3D
 
-var _waiting_for_stl: bool = false
+#@export var body_node_path: NodePath = NodePath("body")
 
+var _waiting_for_stl: bool = false
 
 func _ready() -> void:
 	_apply_wheel_scale()
-	var car_body := get_node_or_null("CarBody") as MeshInstance3D
+	var car_body := get_node_or_null("body") as MeshInstance3D
 	if car_body != null and body_paint != null:
 		# CarBody `_ready` runs before this node, so the STL may already be loaded.
 		if car_body.mesh != null:
@@ -20,7 +21,6 @@ func _ready() -> void:
 		elif car_body.has_signal(&"stl_loaded"):
 			_waiting_for_stl = true
 			car_body.connect(&"stl_loaded", Callable(self, "_on_car_body_stl_loaded").bind(car_body))
-
 
 func _on_car_body_stl_loaded(_mesh: Mesh, car_body: MeshInstance3D) -> void:
 	_waiting_for_stl = false
@@ -46,37 +46,69 @@ func _apply_body_paint(car_body: MeshInstance3D) -> void:
 
 
 ## Runtime paint updates (e.g. from the garage spray pistol).
-func set_car_body_color(color: Color) -> void:
-	var car_body := get_node_or_null("CarBody") as MeshInstance3D
-	if car_body == null:
+#func set_car_body_color(color: Color) -> void:
+	#var car_body := get_node_or_null("CarBody") as MeshInstance3D
+	#if car_body == null:
+		#return
+#
+	## Build a material based on whatever is currently on the body.
+	#var base := car_body.material_override
+	#var mat: StandardMaterial3D
+	#if base is StandardMaterial3D:
+		#mat = (base as StandardMaterial3D).duplicate()
+	#elif body_paint != null and body_paint is StandardMaterial3D:
+		#mat = (body_paint as StandardMaterial3D).duplicate()
+	#else:
+		#mat = StandardMaterial3D.new()
+		#mat.metallic = 0.4
+		#mat.roughness = 0.35
+#
+	#var c := color
+	#c.a = 1.0
+	#mat.albedo_color = c
+	#mat.transmission = 0.0
+#
+	#body_paint = mat
+#
+	## If the STL is already loaded, apply immediately; otherwise wait for it.
+	#if car_body.mesh != null:
+		#_apply_body_paint(car_body)
+	#elif car_body.has_signal(&"stl_loaded") and not _waiting_for_stl:
+		#_waiting_for_stl = true
+		#car_body.connect(&"stl_loaded", Callable(self, "_on_car_body_stl_loaded").bind(car_body))
+
+func set_car_body_color(new_color: Color) -> void:
+	print_debug("[DEBUG CAR COLOR] selected=", new_color)
+	#var body = get_node_or_null(body_node_path)
+	var body = find_child("body", true, false)
+	if not body:
+		print_debug("body not found: body")
 		return
 
-	# Build a material based on whatever is currently on the body.
-	var base := car_body.material_override
-	var mat: StandardMaterial3D
-	if base is StandardMaterial3D:
-		mat = (base as StandardMaterial3D).duplicate()
-	elif body_paint != null and body_paint is StandardMaterial3D:
-		mat = (body_paint as StandardMaterial3D).duplicate()
-	else:
-		mat = StandardMaterial3D.new()
-		mat.metallic = 0.4
-		mat.roughness = 0.35
+	# iterujemy po wszystkich powierzchniach karoserii
+	var surface_count = body.mesh.get_surface_count()
+	for i in range(surface_count):
+		var mat = body.get_surface_override_material(i)
 
-	var c := color
-	c.a = 1.0
-	mat.albedo_color = c
-	mat.transmission = 0.0
+		# jeśli nie ma materiału override, pobierz domyślny
+		if not mat:
+			mat = body.mesh.surface_get_material(i)
 
-	body_paint = mat
+		if mat:
+			# sklonuj materiał, żeby nie zmieniać oryginału
+			var mat_copy = mat.duplicate()
+			body.set_surface_override_material(i, mat_copy)
 
-	# If the STL is already loaded, apply immediately; otherwise wait for it.
-	if car_body.mesh != null:
-		_apply_body_paint(car_body)
-	elif car_body.has_signal(&"stl_loaded") and not _waiting_for_stl:
-		_waiting_for_stl = true
-		car_body.connect(&"stl_loaded", Callable(self, "_on_car_body_stl_loaded").bind(car_body))
-
+			# zmiana koloru
+			if mat_copy is StandardMaterial3D:
+				mat_copy.albedo_texture = null
+				mat_copy.albedo_color = new_color
+			elif mat_copy is ShaderMaterial:
+				# jeśli shader ma uniform 'albedo_color'
+				if mat_copy.has_parameter("albedo_color"):
+					mat_copy.set_shader_parameter("albedo_color", new_color)
+			else:
+				push_warning("Nieobsługiwany typ materiału: %s" % mat_copy)
 
 ## Align wheel bottoms to the top of a horizontal floor mesh (same logic as former garage-only code).
 func align_wheels_to_floor(floor_mesh_instance: MeshInstance3D) -> void:
