@@ -1,0 +1,61 @@
+name: Deploy Godot 4.6.1 to GitHub Pages
+
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Godot 4.6.1
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.6.1
+
+      - name: Install export templates
+        run: |
+          godot --headless --install-templates
+
+      - name: Verify export presets
+        run: |
+          if [ ! -f export_presets.cfg ]; then
+            echo "Missing export_presets.cfg!"
+            exit 1
+          fi
+
+      - name: Export Web build
+        run: |
+          mkdir -p build/web
+          godot --headless --export-release "Web" build/web/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
