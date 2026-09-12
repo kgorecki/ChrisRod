@@ -8,6 +8,11 @@ const SCENE_GARAGE := "res://scenes/garage.tscn"
 const SCENE_OPPONENT_SELECT := "res://scenes/opponent_select.tscn"
 const SCENE_RACE := "res://scenes/race.tscn"
 
+const RACE_DRAG := "drag"
+const RACE_ROAD := "road"
+const QUARTER_MILE_M := 402.336
+const ROAD_RACE_LENGTH_M := QUARTER_MILE_M * 6.0
+
 ## Display name of the player's car.
 var car_name: String = "Basic Car 1"
 ## Current paint color for the player's car.
@@ -20,6 +25,8 @@ var engine_power_hp: float = 280.0
 var current_scene_path: String = SCENE_GARAGE
 ## Selected opponent id for the next race (0..2).
 var selected_opponent_id: int = 0
+## `RACE_DRAG` (straight quarter mile) or `RACE_ROAD` (turning course).
+var selected_race_type: String = RACE_DRAG
 
 ## Opponent presets for selection and race AI.
 const OPPONENTS: Array[Dictionary] = [
@@ -40,6 +47,7 @@ func new_game() -> void:
 	engine_power_hp = 280.0
 	current_scene_path = SCENE_GARAGE
 	selected_opponent_id = 0
+	selected_race_type = RACE_DRAG
 
 
 func has_save_file() -> bool:
@@ -55,6 +63,7 @@ func save_game() -> bool:
 		"engine_power_hp": engine_power_hp,
 		"current_scene_path": current_scene_path,
 		"selected_opponent_id": selected_opponent_id,
+		"selected_race_type": selected_race_type,
 	}
 	var json := JSON.stringify(data)
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -90,6 +99,11 @@ func load_game() -> bool:
 	engine_power_hp = float(d.get("engine_power_hp", engine_power_hp))
 	current_scene_path = str(d.get("current_scene_path", SCENE_GARAGE))
 	selected_opponent_id = int(d.get("selected_opponent_id", 0))
+	var race_type := str(d.get("selected_race_type", RACE_DRAG))
+	if race_type == RACE_ROAD:
+		selected_race_type = RACE_ROAD
+	else:
+		selected_race_type = RACE_DRAG
 	return true
 
 
