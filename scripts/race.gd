@@ -23,8 +23,12 @@ var _race_started: bool = false
 @onready var _light_red: ColorRect = $RaceUI/TrafficLights/Center/HBox/LightRed
 @onready var _light_orange: ColorRect = $RaceUI/TrafficLights/Center/HBox/LightOrange
 @onready var _light_green: ColorRect = $RaceUI/TrafficLights/Center/HBox/LightGreen
+@onready var _track: Node3D = $RaceTrack
+@onready var _ground: StaticBody3D = $Ground
+@onready var _finish: Area3D = $FinishLine
 
 var _race_over: bool = false
+var _is_road: bool = false
 var _elapsed: float = 0.0
 
 ## Dim “off” lamp colors (same hue, low value).
@@ -38,6 +42,8 @@ const _ON_GREEN := Color(0.2, 0.95, 0.28, 1)
 
 func _ready() -> void:
 	GameState.current_scene_path = GameState.SCENE_RACE
+	_is_road = GameState.selected_race_type == GameState.RACE_ROAD
+	_setup_race_layout()
 	_result.visible = false
 	var i: int = clampi(GameState.selected_opponent_id, 0, GameState.OPPONENTS.size() - 1)
 	var opp: Dictionary = GameState.OPPONENTS[i]
@@ -58,6 +64,27 @@ func _ready() -> void:
 
 func is_race_started() -> bool:
 	return _race_started
+
+
+func get_race_track() -> Node:
+	if _is_road and _track != null and _track.has_method(&"is_road_course") and _track.is_road_course():
+		return _track
+	return null
+
+
+func _setup_race_layout() -> void:
+	if not _is_road:
+		return
+	_ground.visible = false
+	_ground.collision_layer = 0
+	_ground.collision_mask = 0
+	if _track.has_method(&"finish_basis"):
+		_finish.global_transform = _track.finish_basis()
+	var col := _finish.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if col != null:
+		var box := BoxShape3D.new()
+		box.size = Vector3(42, 8, 5)
+		col.shape = box
 
 
 func _debug_car_mesh_instances() -> void:
@@ -83,7 +110,11 @@ func _debug_car_mesh_resource_load() -> void:
 
 
 func _align_race_cars_to_ground() -> void:
-	var floor_mi := $Ground/MeshInstance3D as MeshInstance3D
+	var floor_mi: MeshInstance3D = $Ground/MeshInstance3D
+	if _is_road and _track.has_method(&"get_road_mesh_instance"):
+		var road_mi: MeshInstance3D = _track.get_road_mesh_instance()
+		if road_mi != null:
+			floor_mi = road_mi
 	for car in [_player, _opponent]:
 		var pivot: Node = car.get_node_or_null("CarPivot")
 		if pivot != null and pivot.has_method(&"align_wheels_to_floor"):
@@ -137,11 +168,10 @@ func _process(delta: float) -> void:
 
 	_elapsed += delta
 	_hud_time.text = "Time: %.2f s" % _elapsed
-	var pz: float = _player.global_position.z
-	var dist: float = maxf(0.0, QUARTER_MILE_M - pz)
-	_hud_dist.text = "To finish: %.1f m" % dist
+	_hud_dist.text = "To finish: %.1f m" % _distance_to_finish()
 	var spd: float = _player.get_forward_speed()
 	_hud_speed.text = "Speed: %.0f km/h" % (spd * 3.6)
+	_maybe_finish_by_progress()
 
 
 func _advance_countdown(delta: float) -> void:
@@ -186,9 +216,35 @@ func _on_finish_area_body_entered(body: Node3D) -> void:
 		_show_result(false)
 
 
+func _distance_to_finish() -> float:
+	if _is_road and _track.has_method(&"remaining_distance"):
+		return _track.remaining_distance(_player.global_position)
+	return maxf(0.0, QUARTER_MILE_M - _player.global_position.z)
+
+
+func _maybe_finish_by_progress() -> void:
+	if not _is_road or _race_over or _track == null:
+		return
+	var p_rem: float = _track.remaining_distance(_player.global_position)
+	var o_rem := INF
+	if _opponent.has_method(&"get_path_s"):
+		o_rem = maxf(0.0, _track.get_length() - _opponent.get_path_s())
+	if p_rem > 1.0 and o_rem > 1.0:
+		return
+	if p_rem <= o_rem:
+		_on_finish_area_body_entered(_player)
+	else:
+		_on_finish_area_body_entered(_opponent)
+
+
 func _show_result(player_won: bool) -> void:
 	_result.visible = true
-	if player_won:
+	if _is_road:
+		if player_won:
+			_result_text.text = "You finished the road course first — you win!"
+		else:
+			_result_text.text = "Your opponent reached the finish first — you lose."
+	elif player_won:
 		_result_text.text = "You crossed the quarter mile first — you win!"
 	else:
 		_result_text.text = "Your opponent reached the line first — you lose."
