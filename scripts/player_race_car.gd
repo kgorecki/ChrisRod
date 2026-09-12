@@ -47,12 +47,12 @@ func _apply_camera_mode() -> void:
 			_cam.rotation_degrees = Vector3(-10.0, 180.0, 0.0)
 			_cam.fov = 70.0
 		CAM_COCKPIT:
-			_cam.position = Vector3(-0.32, 1.08, 1.85)
-			_cam.rotation_degrees = Vector3(-3.0, 180.0, 0.0)
-			_cam.fov = 75.0
+			_cam.position = Vector3(0.42, 0.88, 1.52)
+			_cam.rotation_degrees = Vector3(-2.0, 180.0, 0.0)
+			_cam.fov = 72.0
 		CAM_BUMPER:
-			_cam.position = Vector3(0.0, 0.48, 3.9)
-			_cam.rotation_degrees = Vector3(-1.5, 180.0, 0.0)
+			_cam.position = Vector3(0.0, 0.16, 4.85)
+			_cam.rotation_degrees = Vector3(-1.0, 180.0, 0.0)
 			_cam.fov = 72.0
 	_cam.current = true
 
