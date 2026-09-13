@@ -24,10 +24,10 @@ albedo_color = Color(0.22, 0.22, 0.24, 1)
 
 [sub_resource type="BoxMesh" id="FloorMesh"]
 material = SubResource("FloorMat")
-size = Vector3(24, 0.3, 24)
+size = Vector3(14.4, 0.3, 24)
 
 [sub_resource type="BoxShape3D" id="FloorShape"]
-size = Vector3(24, 0.3, 24)
+size = Vector3(14.4, 0.3, 24)
 
 [sub_resource type="CylinderMesh" id="ClockMesh"]
 top_radius = 0.55
@@ -52,14 +52,14 @@ albedo_color = Color(0.35, 0.22, 0.12, 1)
 size = Vector3(2.2, 0.9, 1.1)
 
 [sub_resource type="BoxMesh" id="DoorMesh"]
-size = Vector3(6, 3.2, 0.25)
+size = Vector3(6, 6.4, 0.25)
 
 [sub_resource type="StandardMaterial3D" id="DoorMat"]
 albedo_color = Color(0.28, 0.3, 0.34, 1)
 metallic = 0.2
 
 [sub_resource type="BoxShape3D" id="DoorShape"]
-size = Vector3(6, 3.2, 0.25)
+size = Vector3(6, 6.4, 0.25)
 
 [sub_resource type="BoxMesh" id="SprayMesh"]
 size = Vector3(0.18, 0.38, 0.08)
@@ -73,6 +73,139 @@ roughness = 0.4
 [sub_resource type="BoxShape3D" id="SprayShape"]
 size = Vector3(0.18, 0.38, 0.08)
 
+[sub_resource type="StandardMaterial3D" id="ChartBackMat"]
+albedo_color = Color(0.28, 0.24, 0.18, 1)
+
+[sub_resource type="BoxMesh" id="ChartBackMesh"]
+material = SubResource("ChartBackMat")
+size = Vector3(0.46, 0.01, 0.62)
+
+[sub_resource type="StandardMaterial3D" id="ChartMat"]
+albedo_color = Color(0.93, 0.88, 0.72, 1)
+
+[sub_resource type="BoxMesh" id="ChartMesh"]
+material = SubResource("ChartMat")
+size = Vector3(0.42, 0.012, 0.56)
+
+[sub_resource type="StandardMaterial3D" id="ChartLineMat"]
+albedo_color = Color(0.25, 0.32, 0.42, 1)
+
+[sub_resource type="BoxMesh" id="ChartLineMesh"]
+material = SubResource("ChartLineMat")
+size = Vector3(0.34, 0.004, 0.012)
+
+[sub_resource type="BoxShape3D" id="ChartShape"]
+size = Vector3(0.48, 0.08, 0.64)
+
+[sub_resource type="StandardMaterial3D" id="PaperMat"]
+albedo_color = Color(0.86, 0.84, 0.78, 1)
+
+[sub_resource type="BoxMesh" id="PaperMesh"]
+material = SubResource("PaperMat")
+size = Vector3(0.52, 0.014, 0.68)
+
+[sub_resource type="StandardMaterial3D" id="PaperHeadMat"]
+albedo_color = Color(0.45, 0.08, 0.08, 1)
+
+[sub_resource type="BoxMesh" id="PaperHeadMesh"]
+material = SubResource("PaperHeadMat")
+size = Vector3(0.5, 0.006, 0.1)
+
+[sub_resource type="BoxShape3D" id="PaperShape"]
+size = Vector3(0.56, 0.08, 0.72)
+
+[sub_resource type="StandardMaterial3D" id="WallMat"]
+albedo_color = Color(0.46, 0.43, 0.38, 1)
+roughness = 0.88
+
+[sub_resource type="BoxMesh" id="WallSideMesh"]
+material = SubResource("WallMat")
+size = Vector3(0.3, 6.4, 24.3)
+
+[sub_resource type="BoxMesh" id="WallBackMesh"]
+material = SubResource("WallMat")
+size = Vector3(14.4, 6.4, 0.3)
+
+[sub_resource type="BoxMesh" id="WallFrontMesh"]
+material = SubResource("WallMat")
+size = Vector3(4.05, 6.4, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="CeilingMat"]
+albedo_color = Color(0.34, 0.32, 0.28, 1)
+roughness = 0.92
+
+[sub_resource type="BoxMesh" id="CeilingMesh"]
+material = SubResource("CeilingMat")
+size = Vector3(14.4, 0.2, 19.7)
+
+[sub_resource type="StandardMaterial3D" id="LampMetalMat"]
+albedo_color = Color(0.18, 0.18, 0.2, 1)
+metallic = 0.7
+roughness = 0.35
+
+[sub_resource type="CylinderMesh" id="LampHousingMesh"]
+material = SubResource("LampMetalMat")
+top_radius = 0.22
+bottom_radius = 0.22
+height = 0.08
+radial_segments = 16
+
+[sub_resource type="CylinderMesh" id="LampStemMesh"]
+material = SubResource("LampMetalMat")
+top_radius = 0.03
+bottom_radius = 0.03
+height = 0.28
+radial_segments = 12
+
+[sub_resource type="StandardMaterial3D" id="LampShadeMat"]
+albedo_color = Color(0.82, 0.72, 0.45, 1)
+roughness = 0.55
+
+[sub_resource type="CylinderMesh" id="LampShadeMesh"]
+material = SubResource("LampShadeMat")
+top_radius = 0.08
+bottom_radius = 0.38
+height = 0.2
+radial_segments = 16
+
+[sub_resource type="StandardMaterial3D" id="LampBulbMat"]
+albedo_color = Color(1, 0.95, 0.75, 1)
+emission_enabled = true
+emission = Color(1, 0.9, 0.55, 1)
+emission_energy_multiplier = 2.4
+
+[sub_resource type="SphereMesh" id="LampBulbMesh"]
+material = SubResource("LampBulbMat")
+radius = 0.07
+height = 0.14
+radial_segments = 12
+rings = 8
+
+[sub_resource type="StandardMaterial3D" id="CalBoardMat"]
+albedo_color = Color(0.38, 0.2, 0.1, 1)
+roughness = 0.7
+
+[sub_resource type="BoxMesh" id="CalBoardMesh"]
+material = SubResource("CalBoardMat")
+size = Vector3(0.72, 0.94, 0.04)
+
+[sub_resource type="StandardMaterial3D" id="CalPageMat"]
+albedo_color = Color(0.96, 0.93, 0.86, 1)
+
+[sub_resource type="BoxMesh" id="CalPageMesh"]
+material = SubResource("CalPageMat")
+size = Vector3(0.64, 0.84, 0.012)
+
+[sub_resource type="StandardMaterial3D" id="CalHeadMat"]
+albedo_color = Color(0.62, 0.12, 0.12, 1)
+
+[sub_resource type="BoxMesh" id="CalHeadMesh"]
+material = SubResource("CalHeadMat")
+size = Vector3(0.64, 0.14, 0.008)
+
+[sub_resource type="BoxShape3D" id="CalShape"]
+size = Vector3(0.76, 0.98, 0.12)
+
 [node name="Garage" type="Node3D" unique_id=3918559]
 script = ExtResource("1")
 
@@ -81,7 +214,7 @@ environment = SubResource("Env1")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1236810909]
 transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 4, 10, 6)
-light_energy = 1.15
+light_energy = 0.45
 shadow_enabled = true
 
 [node name="Floor" type="StaticBody3D" parent="." unique_id=1854814397]
@@ -97,19 +230,19 @@ shape = SubResource("FloorShape")
 wheel_scale = 1.0
 
 [node name="InteractClock" type="StaticBody3D" parent="." unique_id=1650387631]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 2.8)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.82, 2.6, 1.8)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="InteractClock" unique_id=736530381]
-transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 11.1115, 0, -1.51501)
+transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0, 0, 0)
 mesh = SubResource("ClockMesh")
 surface_material_override/0 = SubResource("ClockMat")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="InteractClock" unique_id=1350643422]
-transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 11.1115, 0, -1.51501)
+transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0, 0, 0)
 shape = SubResource("ClockShape")
 
 [node name="InteractDesk" type="StaticBody3D" parent="." unique_id=691586932]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.2, 0.45, 1.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0.45, 1.2)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="InteractDesk" unique_id=213402081]
 mesh = SubResource("DeskMesh")
@@ -118,8 +251,120 @@ surface_material_override/0 = SubResource("DeskMat")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk" unique_id=864220574]
 shape = SubResource("DeskShape")
 
+[node name="InteractChart" type="StaticBody3D" parent="InteractDesk"]
+transform = Transform3D(0.951057, 0, 0.309017, 0, 1, 0, -0.309017, 0, 0.951057, -0.78, 0.462, 0.06)
+
+[node name="Backing" type="MeshInstance3D" parent="InteractDesk/InteractChart"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.006, 0)
+mesh = SubResource("ChartBackMesh")
+
+[node name="Sheet" type="MeshInstance3D" parent="InteractDesk/InteractChart"]
+mesh = SubResource("ChartMesh")
+
+[node name="Line1" type="MeshInstance3D" parent="InteractDesk/InteractChart"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, -0.12)
+mesh = SubResource("ChartLineMesh")
+
+[node name="Line2" type="MeshInstance3D" parent="InteractDesk/InteractChart"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0)
+mesh = SubResource("ChartLineMesh")
+
+[node name="Line3" type="MeshInstance3D" parent="InteractDesk/InteractChart"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0.12)
+mesh = SubResource("ChartLineMesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk/InteractChart"]
+shape = SubResource("ChartShape")
+
+[node name="InteractNewspaper" type="StaticBody3D" parent="InteractDesk"]
+transform = Transform3D(0.927184, 0, -0.374607, 0, 1, 0, 0.374607, 0, 0.927184, 0.78, 0.46, -0.04)
+
+[node name="Sheet" type="MeshInstance3D" parent="InteractDesk/InteractNewspaper"]
+mesh = SubResource("PaperMesh")
+
+[node name="Masthead" type="MeshInstance3D" parent="InteractDesk/InteractNewspaper"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.012, -0.26)
+mesh = SubResource("PaperHeadMesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk/InteractNewspaper"]
+shape = SubResource("PaperShape")
+
+[node name="Walls" type="Node3D" parent="."]
+
+[node name="WallLeft" type="MeshInstance3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.05, 3.2, 0)
+mesh = SubResource("WallSideMesh")
+
+[node name="WallRight" type="MeshInstance3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.05, 3.2, 0)
+mesh = SubResource("WallSideMesh")
+
+[node name="WallBack" type="MeshInstance3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 12.15)
+mesh = SubResource("WallBackMesh")
+
+[node name="WallFrontLeft" type="MeshInstance3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.025, 3.2, -7.35)
+mesh = SubResource("WallFrontMesh")
+
+[node name="WallFrontRight" type="MeshInstance3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.025, 3.2, -7.35)
+mesh = SubResource("WallFrontMesh")
+
+[node name="Ceiling" type="MeshInstance3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.5, 2.4)
+mesh = SubResource("CeilingMesh")
+
+[node name="CeilingLamp" type="Node3D" parent="Walls"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.28, 0)
+
+[node name="Housing" type="MeshInstance3D" parent="Walls/CeilingLamp"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.12, 0)
+mesh = SubResource("LampHousingMesh")
+
+[node name="Stem" type="MeshInstance3D" parent="Walls/CeilingLamp"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.06, 0)
+mesh = SubResource("LampStemMesh")
+
+[node name="Shade" type="MeshInstance3D" parent="Walls/CeilingLamp"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.24, 0)
+mesh = SubResource("LampShadeMesh")
+
+[node name="Bulb" type="MeshInstance3D" parent="Walls/CeilingLamp"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.22, 0)
+mesh = SubResource("LampBulbMesh")
+
+[node name="OmniLight3D" type="OmniLight3D" parent="Walls/CeilingLamp"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.28, 0)
+light_color = Color(1, 0.92, 0.72, 1)
+light_energy = 3.4
+light_indirect_energy = 1.2
+shadow_enabled = true
+omni_range = 16.0
+omni_attenuation = 1.2
+
+[node name="InteractCalendar" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.2, 2.2, 11.88)
+
+[node name="Board" type="MeshInstance3D" parent="InteractCalendar"]
+mesh = SubResource("CalBoardMesh")
+
+[node name="Page" type="MeshInstance3D" parent="InteractCalendar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.018)
+mesh = SubResource("CalPageMesh")
+
+[node name="Header" type="MeshInstance3D" parent="InteractCalendar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, -0.026)
+mesh = SubResource("CalHeadMesh")
+
+[node name="Labels" type="Node3D" parent="InteractCalendar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.03)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractCalendar"]
+shape = SubResource("CalShape")
+
 [node name="InteractDoors" type="StaticBody3D" parent="." unique_id=1496841617]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, -7.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, -7.2)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="InteractDoors" unique_id=2028609411]
 mesh = SubResource("DoorMesh")
@@ -129,7 +374,7 @@ surface_material_override/0 = SubResource("DoorMat")
 shape = SubResource("DoorShape")
 
 [node name="InteractSprayPistol" type="StaticBody3D" parent="." unique_id=753276932]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.55, -6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.6, 0.55, -5.4)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="InteractSprayPistol" unique_id=867806488]
 mesh = SubResource("SprayMesh")
@@ -304,6 +549,23 @@ text = "Apply"
 [node name="CancelBtn" type="Button" parent="GarageUI/ColorPickerMenu/Panel/Margin/VBox/HBox" unique_id=257572830]
 layout_mode = 2
 text = "Cancel"
+
+[node name="CalendarHint" type="Label" parent="GarageUI"]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -220.0
+offset_top = -48.0
+offset_right = 220.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "Click or Esc to hang the calendar back"
+horizontal_alignment = 1
 
 [connection signal="pressed" from="GarageUI/ClockMenu/Panel/Margin/VBox/SaveBtn" to="." method="_on_clock_save_pressed"]
 [connection signal="pressed" from="GarageUI/ClockMenu/Panel/Margin/VBox/LoadBtn" to="." method="_on_clock_load_pressed"]

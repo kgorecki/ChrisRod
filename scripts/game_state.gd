@@ -7,6 +7,7 @@ const SCENE_MAIN_MENU := "res://scenes/main_menu.tscn"
 const SCENE_GARAGE := "res://scenes/garage.tscn"
 const SCENE_OPPONENT_SELECT := "res://scenes/opponent_select.tscn"
 const SCENE_RACE := "res://scenes/race.tscn"
+const SCENE_NEWSPAPER := "res://scenes/newspaper.tscn"
 
 const RACE_DRAG := "drag"
 const RACE_ROAD := "road"
@@ -28,11 +29,33 @@ var selected_opponent_id: int = 0
 ## `RACE_DRAG` (straight quarter mile) or `RACE_ROAD` (turning course).
 var selected_race_type: String = RACE_DRAG
 
+## Cash on hand for classifieds (parts and used cars).
+var money: int = 2500
+## Id of the car currently in the garage.
+var current_car_id: String = "basic"
+var owned_car_ids: Array[String] = ["basic"]
+var owned_part_ids: Array[String] = []
+
 ## Opponent presets for selection and race AI.
 const OPPONENTS: Array[Dictionary] = [
 	{"id": 0, "name": "Rival Nova", "accel": 12.0, "vmax": 58.0},
 	{"id": 1, "name": "Street Hawk", "accel": 14.0, "vmax": 62.0},
 	{"id": 2, "name": "Night Runner", "accel": 11.0, "vmax": 60.0},
+]
+
+const PARTS: Array[Dictionary] = [
+	{"id": "carb", "name": "Four-barrel carburetor", "price": 450, "hp": 25, "vmax": 4},
+	{"id": "intake", "name": "Performance intake", "price": 320, "hp": 15, "vmax": 2},
+	{"id": "exhaust", "name": "Headers & exhaust", "price": 380, "hp": 18, "vmax": 5},
+	{"id": "cam", "name": "Racing camshaft", "price": 520, "hp": 30, "vmax": 6},
+	{"id": "tires", "name": "Stickier slicks", "price": 280, "hp": 0, "vmax": 8},
+]
+
+const USED_CARS: Array[Dictionary] = [
+	{"id": "basic", "name": "Basic Car 1", "price": 0, "vmax": 220.0, "hp": 280.0, "color": Color(0.15, 0.45, 0.85, 1.0)},
+	{"id": "coupe", "name": "Street Coupe", "price": 1800, "vmax": 235.0, "hp": 300.0, "color": Color(0.72, 0.12, 0.12, 1.0)},
+	{"id": "roadster", "name": "Open Roadster", "price": 2400, "vmax": 245.0, "hp": 320.0, "color": Color(0.92, 0.78, 0.18, 1.0)},
+	{"id": "hotrod", "name": "Shop Hot Rod", "price": 3600, "vmax": 260.0, "hp": 360.0, "color": Color(0.12, 0.12, 0.12, 1.0)},
 ]
 
 
@@ -48,6 +71,12 @@ func new_game() -> void:
 	current_scene_path = SCENE_GARAGE
 	selected_opponent_id = 0
 	selected_race_type = RACE_DRAG
+	money = 2500
+	current_car_id = "basic"
+	owned_car_ids.clear()
+	owned_car_ids.append("basic")
+	owned_part_ids.clear()
+	refresh_car_stats()
 
 
 func has_save_file() -> bool:
@@ -64,6 +93,10 @@ func save_game() -> bool:
 		"current_scene_path": current_scene_path,
 		"selected_opponent_id": selected_opponent_id,
 		"selected_race_type": selected_race_type,
+		"money": money,
+		"current_car_id": current_car_id,
+		"owned_car_ids": owned_car_ids,
+		"owned_part_ids": owned_part_ids,
 	}
 	var json := JSON.stringify(data)
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -104,7 +137,89 @@ func load_game() -> bool:
 		selected_race_type = RACE_ROAD
 	else:
 		selected_race_type = RACE_DRAG
+	money = int(d.get("money", money))
+	current_car_id = str(d.get("current_car_id", current_car_id))
+	owned_car_ids = _string_array(d.get("owned_car_ids", owned_car_ids))
+	owned_part_ids = _string_array(d.get("owned_part_ids", owned_part_ids))
+	if owned_car_ids.is_empty():
+		owned_car_ids = ["basic"]
+	refresh_car_stats()
 	return true
+
+
+func listing_by_id(list: Array[Dictionary], item_id: String) -> Dictionary:
+	for item in list:
+		if str(item.get("id", "")) == item_id:
+			return item
+	return {}
+
+
+func owns_part(part_id: String) -> bool:
+	return owned_part_ids.has(part_id)
+
+
+func owns_car(car_id: String) -> bool:
+	return owned_car_ids.has(car_id)
+
+
+func refresh_car_stats() -> void:
+	var car: Dictionary = listing_by_id(USED_CARS, current_car_id)
+	if car.is_empty():
+		car = listing_by_id(USED_CARS, "basic")
+	car_name = str(car.get("name", car_name))
+	vmax_kmh = float(car.get("vmax", vmax_kmh))
+	engine_power_hp = float(car.get("hp", engine_power_hp))
+	for part_id in owned_part_ids:
+		var part: Dictionary = listing_by_id(PARTS, part_id)
+		if part.is_empty():
+			continue
+		vmax_kmh += float(part.get("vmax", 0.0))
+		engine_power_hp += float(part.get("hp", 0.0))
+
+
+func buy_part(part_id: String) -> String:
+	var part: Dictionary = listing_by_id(PARTS, part_id)
+	if part.is_empty():
+		return "That part is not in the paper."
+	if owns_part(part_id):
+		return "Already bolted on."
+	var price := int(part.get("price", 0))
+	if money < price:
+		return "Not enough cash."
+	money -= price
+	owned_part_ids.append(part_id)
+	refresh_car_stats()
+	return ""
+
+
+func buy_or_select_car(car_id: String) -> String:
+	var car: Dictionary = listing_by_id(USED_CARS, car_id)
+	if car.is_empty():
+		return "That car is not listed."
+	if current_car_id == car_id:
+		return "Already in the garage."
+	if owns_car(car_id):
+		current_car_id = car_id
+		refresh_car_stats()
+		return ""
+	var price := int(car.get("price", 0))
+	if money < price:
+		return "Not enough cash."
+	money -= price
+	owned_car_ids.append(car_id)
+	current_car_id = car_id
+	car_color = car.get("color", car_color)
+	refresh_car_stats()
+	return ""
+
+
+func _string_array(value: Variant) -> Array[String]:
+	var out: Array[String] = []
+	if typeof(value) != TYPE_ARRAY:
+		return out
+	for item in value:
+		out.append(str(item))
+	return out
 
 
 func go_to_saved_scene(tree: SceneTree) -> void:
