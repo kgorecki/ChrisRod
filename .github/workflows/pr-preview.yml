@@ -1,0 +1,61 @@
+# PR previews at https://<user>.github.io/ChrisRod/pr-preview/pr-<number>/
+#
+# Same Pages setup as production: deploy from the gh-pages branch.
+# Fork PRs are skipped (this action cannot publish them).
+
+name: Deploy PR preview
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  export:
+    if: >
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    uses: ./.github/workflows/export-web.yml
+
+  preview:
+    needs: export
+    if: >
+      always() &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.action == 'closed' || needs.export.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: gh-pages-push
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download web build
+        if: github.event.action != 'closed'
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: build/web
+
+      - name: Deploy or remove PR preview
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: ./build/web
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
+          qr-code: true
+          wait-for-pages-deployment: true

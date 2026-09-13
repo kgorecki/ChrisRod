@@ -1,77 +1,58 @@
+# Production site at https://<user>.github.io/ChrisRod/
+#
+# Pages must be: Settings → Pages → Deploy from a branch → gh-pages / (root).
+# The official "GitHub Actions" Pages source cannot host PR preview folders.
+#
+# Actions must be allowed to write: Settings → Actions → General →
+# Workflow permissions → Read and write permissions.
+
 name: Deploy Godot 4.6.1 to GitHub Pages
 
 on:
   push:
     branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: "pages"
+  group: production-pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  export:
+    uses: ./.github/workflows/export-web.yml
+
+  deploy:
+    needs: export
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
+    concurrency:
+      group: gh-pages-push
+      cancel-in-progress: false
+
+    environment:
+      name: github-pages
+      url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup Godot 4.6.1
-        uses: chickensoft-games/setup-godot@v2
+      - name: Download web build
+        uses: actions/download-artifact@v4
         with:
-          version: 4.6.1
-          use-dotnet: false
-          include-templates: true
-
-      - name: Verify export presets
-        run: |
-          if [ ! -f export_presets.cfg ]; then
-            echo "Missing export_presets.cfg!"
-            exit 1
-          fi
-          godot --version
-
-      - name: Import project
-        run: godot --headless --import
-
-      - name: Export Web build
-        run: |
-          mkdir -p build/web
-          godot --headless --export-release "Web" build/web/index.html
-          test -f build/web/index.html
-          test -f build/web/index.wasm
-          test -f build/web/index.pck
-          # GitHub Pages runs Jekyll by default; this keeps Godot files as-is.
-          touch build/web/.nojekyll
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
+          name: web-build
           path: build/web
 
-  deploy:
-    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Deploy production to gh-pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: build/web
+          branch: gh-pages
+          clean: true
+          # Keep PR preview folders when refreshing production.
+          clean-exclude: |
+            pr-preview
+          force: false
