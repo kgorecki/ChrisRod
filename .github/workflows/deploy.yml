@@ -2,9 +2,9 @@ name: Deploy Godot 4.6.1 to GitHub Pages
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
   workflow_dispatch:
 
 permissions:
@@ -19,6 +19,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repo
@@ -28,10 +29,8 @@ jobs:
         uses: chickensoft-games/setup-godot@v2
         with:
           version: 4.6.1
-
-      - name: Install export templates
-        run: |
-          godot --headless --install-templates
+          use-dotnet: false
+          include-templates: true
 
       - name: Verify export presets
         run: |
@@ -39,11 +38,23 @@ jobs:
             echo "Missing export_presets.cfg!"
             exit 1
           fi
+          godot --version
+
+      - name: Import project
+        run: godot --headless --import
 
       - name: Export Web build
         run: |
           mkdir -p build/web
           godot --headless --export-release "Web" build/web/index.html
+          test -f build/web/index.html
+          test -f build/web/index.wasm
+          test -f build/web/index.pck
+          # GitHub Pages runs Jekyll by default; this keeps Godot files as-is.
+          touch build/web/.nojekyll
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
@@ -51,8 +62,10 @@ jobs:
           path: build/web
 
   deploy:
+    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     environment:
       name: github-pages
