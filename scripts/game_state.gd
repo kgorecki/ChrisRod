@@ -35,6 +35,8 @@ var money: int = 2500
 var current_car_id: String = "basic"
 var owned_car_ids: Array[String] = ["basic"]
 var owned_part_ids: Array[String] = []
+var owned_gearbox_ids: Array[String] = ["gb_auto3"]
+var equipped_gearbox_id: String = "gb_auto3"
 
 ## Opponent presets for selection and race AI.
 const OPPONENTS: Array[Dictionary] = [
@@ -49,6 +51,58 @@ const PARTS: Array[Dictionary] = [
 	{"id": "exhaust", "name": "Headers & exhaust", "price": 380, "hp": 18, "vmax": 5},
 	{"id": "cam", "name": "Racing camshaft", "price": 520, "hp": 30, "vmax": 6},
 	{"id": "tires", "name": "Stickier slicks", "price": 280, "hp": 0, "vmax": 8},
+]
+
+const DEFAULT_GEARBOX_ID := "gb_auto3"
+
+## Higher ratio = more launch, lower top speed in that gear.
+## `top_speed` scales the car's vmax; more gears + a taller last gear raise it.
+const GEARBOXES: Array[Dictionary] = [
+	{
+		"id": "gb_auto3",
+		"name": "Automatic 3-speed",
+		"price": 0,
+		"automatic": true,
+		"shift_time": 0.42,
+		"top_speed": 0.82,
+		"ratios": [2.52, 1.52, 1.00],
+	},
+	{
+		"id": "gb_man3",
+		"name": "3-speed manual",
+		"price": 420,
+		"automatic": false,
+		"shift_time": 0.20,
+		"top_speed": 0.88,
+		"ratios": [2.98, 1.58, 1.00],
+	},
+	{
+		"id": "gb_man4",
+		"name": "4-speed manual",
+		"price": 740,
+		"automatic": false,
+		"shift_time": 0.16,
+		"top_speed": 0.95,
+		"ratios": [3.15, 1.92, 1.34, 1.00],
+	},
+	{
+		"id": "gb_man5",
+		"name": "5-speed manual",
+		"price": 1150,
+		"automatic": false,
+		"shift_time": 0.12,
+		"top_speed": 1.00,
+		"ratios": [3.28, 2.08, 1.48, 1.14, 0.89],
+	},
+	{
+		"id": "gb_race5",
+		"name": "5-speed racing",
+		"price": 1850,
+		"automatic": false,
+		"shift_time": 0.07,
+		"top_speed": 1.08,
+		"ratios": [3.55, 2.22, 1.58, 1.18, 0.76],
+	},
 ]
 
 const USED_CARS: Array[Dictionary] = [
@@ -76,6 +130,9 @@ func new_game() -> void:
 	owned_car_ids.clear()
 	owned_car_ids.append("basic")
 	owned_part_ids.clear()
+	owned_gearbox_ids.clear()
+	owned_gearbox_ids.append(DEFAULT_GEARBOX_ID)
+	equipped_gearbox_id = DEFAULT_GEARBOX_ID
 	refresh_car_stats()
 
 
@@ -97,6 +154,8 @@ func save_game() -> bool:
 		"current_car_id": current_car_id,
 		"owned_car_ids": owned_car_ids,
 		"owned_part_ids": owned_part_ids,
+		"owned_gearbox_ids": owned_gearbox_ids,
+		"equipped_gearbox_id": equipped_gearbox_id,
 	}
 	var json := JSON.stringify(data)
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -141,8 +200,16 @@ func load_game() -> bool:
 	current_car_id = str(d.get("current_car_id", current_car_id))
 	owned_car_ids = _string_array(d.get("owned_car_ids", owned_car_ids))
 	owned_part_ids = _string_array(d.get("owned_part_ids", owned_part_ids))
+	owned_gearbox_ids = _string_array(d.get("owned_gearbox_ids", owned_gearbox_ids))
+	equipped_gearbox_id = str(d.get("equipped_gearbox_id", equipped_gearbox_id))
 	if owned_car_ids.is_empty():
 		owned_car_ids = ["basic"]
+	if owned_gearbox_ids.is_empty():
+		owned_gearbox_ids = [DEFAULT_GEARBOX_ID]
+	if listing_by_id(GEARBOXES, equipped_gearbox_id).is_empty():
+		equipped_gearbox_id = DEFAULT_GEARBOX_ID
+	if not owns_gearbox(equipped_gearbox_id):
+		owned_gearbox_ids.append(equipped_gearbox_id)
 	refresh_car_stats()
 	return true
 
@@ -160,6 +227,31 @@ func owns_part(part_id: String) -> bool:
 
 func owns_car(car_id: String) -> bool:
 	return owned_car_ids.has(car_id)
+
+
+func owns_gearbox(gearbox_id: String) -> bool:
+	return owned_gearbox_ids.has(gearbox_id)
+
+
+func get_equipped_gearbox() -> Dictionary:
+	var box: Dictionary = listing_by_id(GEARBOXES, equipped_gearbox_id)
+	if box.is_empty():
+		box = listing_by_id(GEARBOXES, DEFAULT_GEARBOX_ID)
+	return box
+
+
+func get_effective_vmax_kmh() -> float:
+	return vmax_kmh * float(get_equipped_gearbox().get("top_speed", 1.0))
+
+
+func gearbox_ratio_text(box: Dictionary) -> String:
+	var ratios: Variant = box.get("ratios", [])
+	if typeof(ratios) != TYPE_ARRAY:
+		return ""
+	var bits: Array[String] = []
+	for ratio in ratios:
+		bits.append("%.2f" % float(ratio))
+	return " · ".join(bits)
 
 
 func refresh_car_stats() -> void:
@@ -189,6 +281,24 @@ func buy_part(part_id: String) -> String:
 	money -= price
 	owned_part_ids.append(part_id)
 	refresh_car_stats()
+	return ""
+
+
+func buy_or_equip_gearbox(gearbox_id: String) -> String:
+	var box: Dictionary = listing_by_id(GEARBOXES, gearbox_id)
+	if box.is_empty():
+		return "That gearbox is not in the paper."
+	if equipped_gearbox_id == gearbox_id:
+		return "Already bolted on."
+	if owns_gearbox(gearbox_id):
+		equipped_gearbox_id = gearbox_id
+		return ""
+	var price := int(box.get("price", 0))
+	if money < price:
+		return "Not enough cash."
+	money -= price
+	owned_gearbox_ids.append(gearbox_id)
+	equipped_gearbox_id = gearbox_id
 	return ""
 
 

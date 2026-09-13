@@ -26,6 +26,10 @@ func _refresh() -> void:
 func _rebuild_parts() -> void:
 	for child in _parts_list.get_children():
 		child.queue_free()
+	_parts_list.add_child(_heading("TRANSMISSIONS"))
+	for box in GameState.GEARBOXES:
+		_parts_list.add_child(_make_gearbox_card(box))
+	_parts_list.add_child(_heading("ENGINE & CHASSIS"))
 	for part in GameState.PARTS:
 		_parts_list.add_child(_make_part_card(part))
 
@@ -54,6 +58,36 @@ func _make_part_card(part: Dictionary) -> Control:
 		btn.pressed.connect(_on_buy_part.bind(part_id))
 	box.add_child(btn)
 	return box
+
+
+func _make_gearbox_card(box: Dictionary) -> Control:
+	var gearbox_id := str(box.get("id", ""))
+	var equipped := GameState.equipped_gearbox_id == gearbox_id
+	var owned := GameState.owns_gearbox(gearbox_id)
+	var price := int(box.get("price", 0))
+	var gears: Variant = box.get("ratios", [])
+	var gear_count := 0
+	if typeof(gears) == TYPE_ARRAY:
+		gear_count = gears.size()
+	var kind := "automatic" if bool(box.get("automatic", false)) else "manual"
+	var top_pct := int(round(float(box.get("top_speed", 1.0)) * 100.0))
+	var card := _card()
+	card.add_child(_heading(str(box.get("name", "Gearbox"))))
+	card.add_child(_body("%d gears · %s · top speed %d%%" % [gear_count, kind, top_pct]))
+	card.add_child(_body("Ratios  %s" % GameState.gearbox_ratio_text(box)))
+	var btn := _ink_button()
+	if equipped:
+		btn.text = "Installed"
+		btn.disabled = true
+	elif owned:
+		btn.text = "Bolt it on"
+		btn.pressed.connect(_on_buy_gearbox.bind(gearbox_id))
+	else:
+		btn.text = "Buy — $%d" % price
+		btn.disabled = price > 0 and GameState.money < price
+		btn.pressed.connect(_on_buy_gearbox.bind(gearbox_id))
+	card.add_child(btn)
+	return card
 
 
 func _make_car_card(car: Dictionary) -> Control:
@@ -108,6 +142,19 @@ func _body(text: String) -> Label:
 	label.text = text
 	label.modulate = Color(0.25, 0.22, 0.18, 1)
 	return label
+
+
+func _on_buy_gearbox(gearbox_id: String) -> void:
+	var already_owned := GameState.owns_gearbox(gearbox_id)
+	var err := GameState.buy_or_equip_gearbox(gearbox_id)
+	if err.is_empty():
+		if already_owned:
+			_status.text = "Swapped the box. Ratios are live."
+		else:
+			_status.text = "New gearbox is in. Watch the shift points."
+	else:
+		_status.text = err
+	_refresh()
 
 
 func _on_buy_part(part_id: String) -> void:

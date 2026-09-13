@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://13fdlkxeccj1"]
+[gd_scene load_steps=18 format=3 uid="uid://13fdlkxeccj1"]
 
 [ext_resource type="Script" uid="uid://dmsj4ekbiqrvr" path="res://scripts/race.gd" id="1"]
 [ext_resource type="Script" uid="uid://lmu5w71pep8v" path="res://scripts/player_race_car.gd" id="2"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scripts/track_visuals.gd" id="5"]
 [ext_resource type="Script" path="res://scripts/race_track.gd" id="6"]
 [ext_resource type="Script" path="res://scripts/race_touch_controls.gd" id="7"]
+[ext_resource type="Script" path="res://scripts/rpm_meter.gd" id="8"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 sky_top_color = Color(0.25, 0.35, 0.55, 1)
@@ -158,7 +159,7 @@ anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -320.0
-offset_bottom = 160.0
+offset_bottom = 200.0
 grow_horizontal = 0
 
 [node name="Margin" type="MarginContainer" parent="RaceUI/Panel"]
@@ -180,6 +181,10 @@ text = "Opponent: —"
 layout_mode = 2
 text = "Speed: 0 km/h"
 
+[node name="GearLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Gear: —"
+
 [node name="DistLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
 layout_mode = 2
 text = "To finish: —"
@@ -190,7 +195,23 @@ text = "Time: 0.00 s"
 
 [node name="HintLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
 layout_mode = 2
-text = "W / Up: throttle · S / Down: brake · A/D or arrows: steer · C: camera"
+text = "W / Up: throttle · S / Down: brake · A/D or arrows: steer · Q/E: shift · C: camera"
+
+[node name="RpmMeter" type="Control" parent="RaceUI"]
+layout_mode = 3
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -150.0
+offset_top = -196.0
+offset_right = 150.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+script = ExtResource("8")
 
 [node name="MobileControls" type="Control" parent="RaceUI"]
 layout_mode = 3

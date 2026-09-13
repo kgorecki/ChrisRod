@@ -7,6 +7,10 @@ const _NARROW_WIDTH := 900.0
 var _wheel: _SteeringWheel
 var _accel: _Pedal
 var _brake: _Pedal
+var _shift_up: _ShiftPaddle
+var _shift_down: _ShiftPaddle
+var _shift_up_queued: bool = false
+var _shift_down_queued: bool = false
 
 
 func _ready() -> void:
@@ -32,6 +36,20 @@ func is_brake_down() -> bool:
 	return visible and _brake != null and _brake.is_held()
 
 
+func pop_shift_up() -> bool:
+	if not visible or _shift_up_queued == false:
+		return false
+	_shift_up_queued = false
+	return true
+
+
+func pop_shift_down() -> bool:
+	if not visible or _shift_down_queued == false:
+		return false
+	_shift_down_queued = false
+	return true
+
+
 func _on_viewport_size_changed() -> void:
 	_refresh_layout()
 	_refresh_visible()
@@ -46,6 +64,7 @@ func _refresh_visible() -> void:
 	var hint := get_parent().get_node_or_null("Panel/Margin/VBox/HintLabel") as CanvasItem
 	if hint != null:
 		hint.visible = not visible
+	_refresh_shift_visible()
 
 
 func _is_mobile_view() -> bool:
@@ -75,6 +94,19 @@ func _build_controls() -> void:
 	_accel.setup("GAS", Color(0.18, 0.62, 0.28, 1.0))
 	add_child(_accel)
 
+	_shift_down = _ShiftPaddle.new()
+	_shift_down.name = "ShiftDown"
+	_shift_down.setup("–", Color(0.72, 0.55, 0.18, 1.0))
+	_shift_down.pressed.connect(func() -> void: _shift_down_queued = true)
+	add_child(_shift_down)
+
+	_shift_up = _ShiftPaddle.new()
+	_shift_up.name = "ShiftUp"
+	_shift_up.setup("+", Color(0.72, 0.55, 0.18, 1.0))
+	_shift_up.pressed.connect(func() -> void: _shift_up_queued = true)
+	add_child(_shift_up)
+	_refresh_shift_visible()
+
 
 func _refresh_layout() -> void:
 	var vs := get_viewport().get_visible_rect().size
@@ -95,6 +127,21 @@ func _refresh_layout() -> void:
 	_accel.size = Vector2(accel_w, accel_h)
 	_brake.position = Vector2(vs.x - margin - accel_w - gap - pedal_w, vs.y - margin - pedal_h)
 	_brake.size = Vector2(pedal_w, pedal_h)
+
+	var paddle := 56.0 * scale
+	var paddle_gap := 10.0 * scale
+	_shift_down.position = Vector2(margin, _wheel.position.y - paddle_gap - paddle)
+	_shift_down.size = Vector2(paddle, paddle)
+	_shift_up.position = Vector2(margin + paddle + paddle_gap, _wheel.position.y - paddle_gap - paddle)
+	_shift_up.size = Vector2(paddle, paddle)
+
+
+func _refresh_shift_visible() -> void:
+	var show_paddles := visible and not bool(GameState.get_equipped_gearbox().get("automatic", false))
+	if _shift_up != null:
+		_shift_up.visible = show_paddles
+	if _shift_down != null:
+		_shift_down.visible = show_paddles
 
 
 class _SteeringWheel extends Control:
@@ -306,4 +353,56 @@ class _Pedal extends Control:
 			body.position.y + body.size.y * 0.55 + text_size.y * 0.25
 		)
 		draw_string(font, text_pos + Vector2(1, 1), _label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0, 0, 0, 0.45))
+		draw_string(font, text_pos, _label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.95, 0.95, 0.93, 0.95))
+
+
+class _ShiftPaddle extends Control:
+	signal pressed
+
+	var _label_text: String = ""
+	var _accent: Color = Color.WHITE
+	var _held: bool = false
+
+	func setup(text: String, accent: Color) -> void:
+		_label_text = text
+		_accent = accent
+
+	func _ready() -> void:
+		mouse_filter = MOUSE_FILTER_STOP
+		focus_mode = FOCUS_NONE
+		resized.connect(queue_redraw)
+
+	func _gui_input(event: InputEvent) -> void:
+		if event is InputEventScreenTouch:
+			var st := event as InputEventScreenTouch
+			if st.pressed:
+				_held = true
+				pressed.emit()
+				queue_redraw()
+				accept_event()
+			else:
+				_held = false
+				queue_redraw()
+		elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				_held = true
+				pressed.emit()
+				queue_redraw()
+				accept_event()
+			else:
+				_held = false
+				queue_redraw()
+
+	func _draw() -> void:
+		var body := Rect2(Vector2(3, 3), size - Vector2(6, 6))
+		var fill := Color(0.16, 0.16, 0.18, 0.92)
+		if _held:
+			fill = fill.lerp(_accent, 0.5)
+		draw_rect(Rect2(Vector2(4, 5), size - Vector2(6, 6)), Color(0, 0, 0, 0.28), true)
+		draw_rect(body, fill, true)
+		draw_rect(body, _accent.darkened(0.2), false, 2.0)
+		var font := get_theme_default_font()
+		var font_size := clampi(int(minf(size.x, size.y) * 0.42), 16, 28)
+		var text_size := font.get_string_size(_label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+		var text_pos := Vector2((size.x - text_size.x) * 0.5, (size.y + text_size.y) * 0.5 - 4.0)
 		draw_string(font, text_pos, _label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(0.95, 0.95, 0.93, 0.95))
