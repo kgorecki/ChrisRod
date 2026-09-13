@@ -9,11 +9,12 @@ const ACCELERATION := 24.0
 const BRAKING := 40.0
 const COAST_FACTOR := 0.985
 const REF_GEAR_RATIO := 2.80
-const RPM_IDLE := 800.0
-const RPM_SHIFT_START := 5000.0
-const RPM_REDLINE := 6200.0
-const RPM_CRITICAL := 6800.0
-const RPM_METER_MAX := 8000.0
+const RPM_IDLE_MIN := 500.0
+const RPM_IDLE := 600.0 ## C1 idle sits between 500 and 700.
+const RPM_SHIFT_START := 5500.0
+const RPM_REDLINE := 6500.0
+const RPM_CRITICAL := 6700.0
+const RPM_METER_MAX := 7000.0
 const OVERREV_HOLD_S := 0.55
 
 const TURN_RATE_RAD := 1.85
@@ -27,6 +28,7 @@ const CAM_COCKPIT := 2
 const CAM_BUMPER := 3
 
 @onready var _cam: Camera3D = $RaceCamera
+@onready var _engine_sound: Node = $EngineSound
 var _cam_mode: int = CAM_FAR
 var _touch: Node = null
 var _gearbox: Dictionary = {}
@@ -110,7 +112,7 @@ func get_rpm() -> float:
 	if top <= 0.05:
 		return RPM_IDLE
 	var rpm := RPM_IDLE + (RPM_REDLINE - RPM_IDLE) * (forward_speed / top)
-	return clampf(rpm, RPM_IDLE, RPM_METER_MAX)
+	return clampf(rpm, RPM_IDLE_MIN, RPM_METER_MAX)
 
 
 func get_rpm_shift_start() -> float:
@@ -158,6 +160,7 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector3.ZERO
 		move_and_slide()
 		rotation.y = heading_yaw
+		_update_engine_sound(false)
 		return
 
 	var max_mps: float = GameState.get_effective_vmax_kmh() / 3.6
@@ -190,6 +193,7 @@ func _physics_process(delta: float) -> void:
 	_keep_on_track()
 	rotation.y = heading_yaw
 	_update_overrev(delta)
+	_update_engine_sound(throttle)
 
 
 func _is_automatic() -> bool:
@@ -270,6 +274,12 @@ func _update_overrev(delta: float) -> void:
 			_engine_blown = true
 	else:
 		_overrev_time = maxf(0.0, _overrev_time - delta * 2.0)
+
+
+func _update_engine_sound(throttle: bool) -> void:
+	if _engine_sound == null or not _engine_sound.has_method(&"set_state"):
+		return
+	_engine_sound.set_state(get_rpm(), 1.0 if throttle else 0.0, _engine_blown, _shift_timer > 0.0)
 
 
 func _poll_touch_shifts() -> void:

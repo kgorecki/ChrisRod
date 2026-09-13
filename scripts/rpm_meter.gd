@@ -1,12 +1,14 @@
 extends Control
 
-const IDLE_RPM := 800.0
-const METER_MAX := 8000.0
+const IDLE_RPM := 600.0
+const METER_MAX := 7000.0
+const CRUISE_START := 2800.0
+const CRUISE_END := 3200.0
 
 var _rpm: float = IDLE_RPM
-var _shift_start: float = 5000.0
-var _redline: float = 6200.0
-var _critical: float = 6800.0
+var _shift_start: float = 5500.0
+var _redline: float = 6500.0
+var _critical: float = 6700.0
 var _blown: bool = false
 var _pulse: float = 0.0
 
@@ -39,6 +41,7 @@ func _draw() -> void:
 	draw_circle(center, radius + 6.0, Color(0.08, 0.08, 0.09, 0.88))
 
 	_draw_zone(center, radius, start_ang, sweep, 0.0, _shift_start, Color(0.18, 0.55, 0.28, 0.85))
+	_draw_zone(center, radius, start_ang, sweep, CRUISE_START, CRUISE_END, Color(0.22, 0.62, 0.78, 0.95))
 	_draw_zone(center, radius, start_ang, sweep, _shift_start, _redline, Color(0.92, 0.72, 0.12, 0.95))
 	_draw_zone(center, radius, start_ang, sweep, _redline, _critical, Color(0.92, 0.28, 0.08, 0.95))
 	_draw_zone(center, radius, start_ang, sweep, _critical, METER_MAX, Color(0.55, 0.04, 0.06, 0.95))
@@ -46,7 +49,7 @@ func _draw() -> void:
 	draw_arc(center, radius, start_ang, start_ang + sweep, 48, Color(0.75, 0.76, 0.78, 0.7), 2.2, true)
 
 	var font := get_theme_default_font()
-	for thousand in range(0, 9):
+	for thousand in range(0, 8):
 		var rpm := float(thousand) * 1000.0
 		var t := clampf(rpm / METER_MAX, 0.0, 1.0)
 		var ang := start_ang + sweep * t
@@ -57,6 +60,18 @@ func _draw() -> void:
 		if thousand % 2 == 0:
 			var label_pos := center + dir * (radius - 22.0) - Vector2(5, 6)
 			draw_string(font, label_pos, str(thousand), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.9, 0.9, 0.92, 0.9))
+
+	var cruise_ang := start_ang + sweep * ((CRUISE_START + CRUISE_END) * 0.5 / METER_MAX)
+	var cruise_dir := Vector2.from_angle(cruise_ang)
+	draw_string(
+		font,
+		center + cruise_dir * (radius + 2.0) + Vector2(-22, 2),
+		"CRUISE",
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		10,
+		Color(0.65, 0.88, 1.0, 0.9)
+	)
 
 	var shift_ang := start_ang + sweep * clampf(_shift_start / METER_MAX, 0.0, 1.0)
 	var shift_dir := Vector2.from_angle(shift_ang)

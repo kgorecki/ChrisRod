@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3 uid="uid://13fdlkxeccj1"]
+[gd_scene load_steps=19 format=3 uid="uid://13fdlkxeccj1"]
 
 [ext_resource type="Script" uid="uid://dmsj4ekbiqrvr" path="res://scripts/race.gd" id="1"]
 [ext_resource type="Script" uid="uid://lmu5w71pep8v" path="res://scripts/player_race_car.gd" id="2"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://scripts/race_track.gd" id="6"]
 [ext_resource type="Script" path="res://scripts/race_touch_controls.gd" id="7"]
 [ext_resource type="Script" path="res://scripts/rpm_meter.gd" id="8"]
+[ext_resource type="Script" path="res://scripts/engine_sound.gd" id="9"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 sky_top_color = Color(0.25, 0.35, 0.55, 1)
@@ -81,6 +82,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.9)
 [node name="CollisionShape3D" type="CollisionShape3D" parent="PlayerCar"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.9)
 shape = SubResource("CarShapeP")
+
+[node name="EngineSound" type="AudioStreamPlayer" parent="PlayerCar"]
+script = ExtResource("9")
 
 [node name="RaceCamera" type="Camera3D" parent="PlayerCar"]
 position = Vector3(0, 2.2, -8.5)
