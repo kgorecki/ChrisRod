@@ -19,6 +19,7 @@ var _race_started: bool = false
 @onready var _hud_dist: Label = $RaceUI/Panel/Margin/VBox/DistLabel
 @onready var _hud_time: Label = $RaceUI/Panel/Margin/VBox/TimeLabel
 @onready var _hud_opp: Label = $RaceUI/Panel/Margin/VBox/OppLabel
+@onready var _rpm_meter: Control = $RaceUI/RpmMeter
 @onready var _mobile: Control = $RaceUI/MobileControls
 @onready var _result: Control = $RaceUI/ResultPanel
 @onready var _result_text: Label = $RaceUI/ResultPanel/Panel/Margin/VBox/ResultLabel
@@ -166,6 +167,10 @@ func _process(delta: float) -> void:
 		return
 	if _player.has_method(&"get_gear_label"):
 		_hud_gear.text = "Gear: %s" % _player.get_gear_label()
+	_update_rpm_meter()
+	if _race_started and not _race_over and _player.has_method(&"is_engine_blown") and _player.is_engine_blown():
+		_show_engine_blown()
+		return
 	if not _race_started:
 		_advance_countdown(delta)
 		return
@@ -246,10 +251,36 @@ func _maybe_finish_by_progress() -> void:
 		_on_finish_area_body_entered(_opponent)
 
 
+func _update_rpm_meter() -> void:
+	if _rpm_meter == null or not _rpm_meter.has_method(&"set_reading"):
+		return
+	if not _player.has_method(&"get_rpm"):
+		return
+	_rpm_meter.set_reading(
+		_player.get_rpm(),
+		_player.get_rpm_shift_start(),
+		_player.get_rpm_redline(),
+		_player.get_rpm_critical(),
+		_player.is_engine_blown()
+	)
+
+
+func _show_engine_blown() -> void:
+	_race_over = true
+	_result.visible = true
+	if _mobile != null:
+		_mobile.visible = false
+	if _rpm_meter != null:
+		_rpm_meter.visible = false
+	_result_text.text = "You stayed in the red too long — the engine is blown."
+
+
 func _show_result(player_won: bool) -> void:
 	_result.visible = true
 	if _mobile != null:
 		_mobile.visible = false
+	if _rpm_meter != null:
+		_rpm_meter.visible = false
 	if _is_road:
 		if player_won:
 			_result_text.text = "You finished the road course first — you win!"

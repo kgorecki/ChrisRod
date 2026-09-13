@@ -9,6 +9,12 @@ const ACCELERATION := 24.0
 const BRAKING := 40.0
 const COAST_FACTOR := 0.985
 const REF_GEAR_RATIO := 2.80
+const RPM_IDLE := 800.0
+const RPM_SHIFT_START := 5000.0
+const RPM_REDLINE := 6200.0
+const RPM_CRITICAL := 6800.0
+const RPM_METER_MAX := 8000.0
+const OVERREV_HOLD_S := 0.55
 
 const TURN_RATE_RAD := 1.85
 
@@ -26,6 +32,8 @@ var _touch: Node = null
 var _gearbox: Dictionary = {}
 var _gear: int = 0
 var _shift_timer: float = 0.0
+var _overrev_time: float = 0.0
+var _engine_blown: bool = false
 
 func _ready() -> void:
 	motion_mode = MOTION_MODE_FLOATING
@@ -91,6 +99,32 @@ func is_automatic_gearbox() -> bool:
 	return _is_automatic()
 
 
+func is_engine_blown() -> bool:
+	return _engine_blown
+
+
+func get_rpm() -> float:
+	if _engine_blown:
+		return 0.0
+	var top := _gear_top_mps(_gear)
+	if top <= 0.05:
+		return RPM_IDLE
+	var rpm := RPM_IDLE + (RPM_REDLINE - RPM_IDLE) * (forward_speed / top)
+	return clampf(rpm, RPM_IDLE, RPM_METER_MAX)
+
+
+func get_rpm_shift_start() -> float:
+	return RPM_SHIFT_START
+
+
+func get_rpm_redline() -> float:
+	return RPM_REDLINE
+
+
+func get_rpm_critical() -> float:
+	return RPM_CRITICAL
+
+
 func _steer_input() -> float:
 	var s := 0.0
 	if Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A):
@@ -132,7 +166,9 @@ func _physics_process(delta: float) -> void:
 	var steer := _steer_input()
 	if _shift_timer > 0.0:
 		_shift_timer = maxf(0.0, _shift_timer - delta)
-	if _is_automatic():
+	if _engine_blown:
+		throttle = false
+	elif _is_automatic():
 		_auto_shift(throttle, brake)
 
 	if throttle and _shift_timer <= 0.0:
@@ -141,6 +177,8 @@ func _physics_process(delta: float) -> void:
 		forward_speed -= BRAKING * delta
 	else:
 		forward_speed *= pow(COAST_FACTOR, delta * 60.0)
+	if _engine_blown:
+		forward_speed *= pow(0.96, delta * 60.0)
 
 	forward_speed = clampf(forward_speed, 0.0, max_mps)
 	heading_yaw += steer * TURN_RATE_RAD * delta
@@ -151,6 +189,7 @@ func _physics_process(delta: float) -> void:
 
 	_keep_on_track()
 	rotation.y = heading_yaw
+	_update_overrev(delta)
 
 
 func _is_automatic() -> bool:
@@ -183,22 +222,26 @@ func _gear_acceleration() -> float:
 	var gear_top := _gear_top_mps(_gear)
 	var headroom := 1.0
 	if gear_top > 0.05:
-		var progress := clampf(forward_speed / gear_top, 0.0, 1.0)
-		if progress >= 1.0:
+		var progress := forward_speed / gear_top
+		if progress >= 1.12:
 			return 0.0
-		headroom = 1.0 - progress * progress
+		if progress >= 1.0:
+			headroom = 0.14
+		else:
+			headroom = 1.0 - progress * progress
 	var hp_scale: float = GameState.engine_power_hp / 280.0
 	return ACCELERATION * (ratio / REF_GEAR_RATIO) * hp_scale * headroom
 
 
 func _request_shift(direction: int) -> void:
-	if _shift_timer > 0.0:
+	if _engine_blown or _shift_timer > 0.0:
 		return
 	var next := _gear + direction
 	if next < 0 or next >= _gear_count():
 		return
 	_gear = next
 	_shift_timer = float(_gearbox.get("shift_time", 0.15))
+	_overrev_time = 0.0
 
 
 func _auto_shift(throttle: bool, brake: bool) -> void:
@@ -215,6 +258,18 @@ func _auto_shift(throttle: bool, brake: bool) -> void:
 		_request_shift(-1)
 	elif (brake or not throttle) and forward_speed < prev_top * 0.62:
 		_request_shift(-1)
+
+
+func _update_overrev(delta: float) -> void:
+	if _engine_blown or _is_automatic():
+		_overrev_time = 0.0
+		return
+	if get_rpm() >= RPM_CRITICAL:
+		_overrev_time += delta
+		if _overrev_time >= OVERREV_HOLD_S:
+			_engine_blown = true
+	else:
+		_overrev_time = maxf(0.0, _overrev_time - delta * 2.0)
 
 
 func _poll_touch_shifts() -> void:
