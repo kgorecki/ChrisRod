@@ -21,10 +21,14 @@ const CAM_BUMPER := 3
 
 @onready var _cam: Camera3D = $RaceCamera
 var _cam_mode: int = CAM_FAR
+var _touch: Node = null
 
 func _ready() -> void:
 	motion_mode = MOTION_MODE_FLOATING
 	_apply_camera_mode()
+	var race := get_parent()
+	if race != null:
+		_touch = race.get_node_or_null("RaceUI/MobileControls")
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -67,7 +71,23 @@ func _steer_input() -> float:
 		s += 1.0
 	if Input.is_key_pressed(KEY_RIGHT) or Input.is_key_pressed(KEY_D):
 		s -= 1.0
+	if _touch != null and _touch.has_method(&"get_steer"):
+		var touch_steer: float = _touch.get_steer()
+		if not is_zero_approx(touch_steer):
+			s = touch_steer
 	return clampf(s, -1.0, 1.0)
+
+
+func _throttle_down() -> bool:
+	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
+		return true
+	return _touch != null and _touch.has_method(&"is_throttle_down") and _touch.is_throttle_down()
+
+
+func _brake_down() -> bool:
+	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
+		return true
+	return _touch != null and _touch.has_method(&"is_brake_down") and _touch.is_brake_down()
 
 
 func _physics_process(delta: float) -> void:
@@ -80,8 +100,8 @@ func _physics_process(delta: float) -> void:
 		return
 
 	var max_mps: float = GameState.vmax_kmh / 3.6
-	var throttle := Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP)
-	var brake := Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN)
+	var throttle := _throttle_down()
+	var brake := _brake_down()
 	var steer := _steer_input()
 
 	if throttle:

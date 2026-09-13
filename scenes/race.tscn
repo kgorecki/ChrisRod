@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://13fdlkxeccj1"]
+[gd_scene load_steps=17 format=3 uid="uid://13fdlkxeccj1"]
 
 [ext_resource type="Script" uid="uid://dmsj4ekbiqrvr" path="res://scripts/race.gd" id="1"]
 [ext_resource type="Script" uid="uid://lmu5w71pep8v" path="res://scripts/player_race_car.gd" id="2"]
@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://bqj8k2m4n5p6r" path="res://scenes/car_vehicle_visual.tscn" id="4"]
 [ext_resource type="Script" path="res://scripts/track_visuals.gd" id="5"]
 [ext_resource type="Script" path="res://scripts/race_track.gd" id="6"]
+[ext_resource type="Script" path="res://scripts/race_touch_controls.gd" id="7"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat"]
 sky_top_color = Color(0.25, 0.35, 0.55, 1)
@@ -190,6 +191,16 @@ text = "Time: 0.00 s"
 [node name="HintLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
 layout_mode = 2
 text = "W / Up: throttle · S / Down: brake · A/D or arrows: steer · C: camera"
+
+[node name="MobileControls" type="Control" parent="RaceUI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7")
 
 [node name="ResultPanel" type="Control" parent="RaceUI"]
 visible = false

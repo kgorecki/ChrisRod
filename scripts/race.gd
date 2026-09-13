@@ -17,6 +17,7 @@ var _race_started: bool = false
 @onready var _hud_dist: Label = $RaceUI/Panel/Margin/VBox/DistLabel
 @onready var _hud_time: Label = $RaceUI/Panel/Margin/VBox/TimeLabel
 @onready var _hud_opp: Label = $RaceUI/Panel/Margin/VBox/OppLabel
+@onready var _mobile: Control = $RaceUI/MobileControls
 @onready var _result: Control = $RaceUI/ResultPanel
 @onready var _result_text: Label = $RaceUI/ResultPanel/Panel/Margin/VBox/ResultLabel
 @onready var _traffic: Control = $RaceUI/TrafficLights
@@ -239,6 +240,8 @@ func _maybe_finish_by_progress() -> void:
 
 func _show_result(player_won: bool) -> void:
 	_result.visible = true
+	if _mobile != null:
+		_mobile.visible = false
 	if _is_road:
 		if player_won:
 			_result_text.text = "You finished the road course first — you win!"
