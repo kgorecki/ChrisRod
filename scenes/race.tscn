@@ -158,7 +158,7 @@ anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -320.0
-offset_bottom = 160.0
+offset_bottom = 200.0
 grow_horizontal = 0
 
 [node name="Margin" type="MarginContainer" parent="RaceUI/Panel"]
@@ -180,6 +180,10 @@ text = "Opponent: —"
 layout_mode = 2
 text = "Speed: 0 km/h"
 
+[node name="GearLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Gear: —"
+
 [node name="DistLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
 layout_mode = 2
 text = "To finish: —"
@@ -190,7 +194,7 @@ text = "Time: 0.00 s"
 
 [node name="HintLabel" type="Label" parent="RaceUI/Panel/Margin/VBox"]
 layout_mode = 2
-text = "W / Up: throttle · S / Down: brake · A/D or arrows: steer · C: camera"
+text = "W / Up: throttle · S / Down: brake · A/D or arrows: steer · Q/E: shift · C: camera"
 
 [node name="MobileControls" type="Control" parent="RaceUI"]
 layout_mode = 3

@@ -315,10 +315,19 @@ func _on_spray_cancel_pressed() -> void:
 
 
 func _show_stats() -> void:
-	var t := "Car: %s\n\nVmax: %.0f km/h\nEngine power: %.0f hp" % [
+	var box: Dictionary = GameState.get_equipped_gearbox()
+	var gears: Variant = box.get("ratios", [])
+	var gear_count := 0
+	if typeof(gears) == TYPE_ARRAY:
+		gear_count = gears.size()
+	var kind := "automatic" if bool(box.get("automatic", false)) else "manual"
+	var t := "Car: %s\n\nVmax: %.0f km/h\nEngine power: %.0f hp\nGearbox: %s\n%s, %d gears" % [
 		GameState.car_name,
-		GameState.vmax_kmh,
+		GameState.get_effective_vmax_kmh(),
 		GameState.engine_power_hp,
+		str(box.get("name", "—")),
+		kind,
+		gear_count,
 	]
 	_stats_label.text = t
 	_stats_panel.visible = true

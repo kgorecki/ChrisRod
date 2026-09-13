@@ -14,6 +14,8 @@ var _race_started: bool = false
 @onready var _player: CharacterBody3D = $PlayerCar
 @onready var _opponent: CharacterBody3D = $OpponentCar
 @onready var _hud_speed: Label = $RaceUI/Panel/Margin/VBox/SpeedLabel
+@onready var _hud_gear: Label = $RaceUI/Panel/Margin/VBox/GearLabel
+@onready var _hud_hint: Label = $RaceUI/Panel/Margin/VBox/HintLabel
 @onready var _hud_dist: Label = $RaceUI/Panel/Margin/VBox/DistLabel
 @onready var _hud_time: Label = $RaceUI/Panel/Margin/VBox/TimeLabel
 @onready var _hud_opp: Label = $RaceUI/Panel/Margin/VBox/OppLabel
@@ -49,6 +51,10 @@ func _ready() -> void:
 	var i: int = clampi(GameState.selected_opponent_id, 0, GameState.OPPONENTS.size() - 1)
 	var opp: Dictionary = GameState.OPPONENTS[i]
 	_hud_opp.text = "Opponent: %s" % str(opp.get("name", "Rival"))
+	if _player.has_method(&"is_automatic_gearbox") and _player.is_automatic_gearbox():
+		_hud_hint.text = "W / Up: throttle · S / Down: brake · A/D or arrows: steer · C: camera"
+	else:
+		_hud_hint.text = "W / Up: throttle · S / Down: brake · A/D or arrows: steer · Q/E: shift · C: camera"
 	_traffic.visible = true
 	_refresh_traffic_lights()
 
@@ -158,6 +164,8 @@ func _debug_mesh_instances_recursive(node: Node, label: String) -> void:
 func _process(delta: float) -> void:
 	if _race_over:
 		return
+	if _player.has_method(&"get_gear_label"):
+		_hud_gear.text = "Gear: %s" % _player.get_gear_label()
 	if not _race_started:
 		_advance_countdown(delta)
 		return
