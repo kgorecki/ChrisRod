@@ -17,10 +17,16 @@ const RPM_CRITICAL := 6700.0
 const RPM_METER_MAX := 7000.0
 const OVERREV_HOLD_S := 0.55
 
-const TURN_RATE_RAD := 1.85
+const WHEELBASE_M := 2.59
+const MAX_STEER_RAD := 0.56 ## ~32° at parking speed.
+const STEER_MIN_SPEED := 1.2 ## Must be rolling (~4 km/h) to turn.
+const HIGH_SPEED_STEER_SCALE := 0.22 ## Tighter lock fades out as speed rises.
 
-## Half the ground width (m) minus a small margin so the car stays on the strip.
+## Half the drag-strip width (m). Past this counts as off-road.
 const TRACK_X_LIMIT := 18.0
+const OFFROAD_ACCEL_SCALE := 0.42
+const OFFROAD_DRAG := 0.993
+const OFFROAD_MAX_SPEED_SCALE := 0.5
 
 const CAM_FAR := 0
 const CAM_CLOSE := 1
@@ -36,6 +42,7 @@ var _gear: int = 0
 var _shift_timer: float = 0.0
 var _overrev_time: float = 0.0
 var _engine_blown: bool = false
+var _off_road: bool = false
 
 func _ready() -> void:
 	motion_mode = MOTION_MODE_FLOATING
@@ -127,6 +134,15 @@ func get_rpm_critical() -> float:
 	return RPM_CRITICAL
 
 
+func _yaw_rate(steer: float, max_mps: float) -> float:
+	if absf(steer) < 0.01 or forward_speed < STEER_MIN_SPEED:
+		return 0.0
+	var speed_frac := clampf(forward_speed / maxf(max_mps, 1.0), 0.0, 1.0)
+	var steer_scale := lerpf(1.0, HIGH_SPEED_STEER_SCALE, speed_frac)
+	var steer_angle := steer * MAX_STEER_RAD * steer_scale
+	return forward_speed * tan(steer_angle) / WHEELBASE_M
+
+
 func _steer_input() -> float:
 	var s := 0.0
 	if Input.is_key_pressed(KEY_LEFT) or Input.is_key_pressed(KEY_A):
@@ -174,23 +190,27 @@ func _physics_process(delta: float) -> void:
 	elif _is_automatic():
 		_auto_shift(throttle, brake)
 
+	_update_surface()
+	var accel_scale := OFFROAD_ACCEL_SCALE if _off_road else 1.0
 	if throttle and _shift_timer <= 0.0:
-		forward_speed += _gear_acceleration() * delta
+		forward_speed += _gear_acceleration() * accel_scale * delta
 	elif brake:
 		forward_speed -= BRAKING * delta
 	else:
 		forward_speed *= pow(COAST_FACTOR, delta * 60.0)
 	if _engine_blown:
 		forward_speed *= pow(0.96, delta * 60.0)
+	if _off_road:
+		forward_speed *= pow(OFFROAD_DRAG, delta * 60.0)
+		forward_speed = minf(forward_speed, max_mps * OFFROAD_MAX_SPEED_SCALE)
 
 	forward_speed = clampf(forward_speed, 0.0, max_mps)
-	heading_yaw += steer * TURN_RATE_RAD * delta
+	heading_yaw += _yaw_rate(steer, max_mps) * delta
 
 	var forward_dir := Vector3(sin(heading_yaw), 0.0, cos(heading_yaw))
 	velocity = forward_dir * forward_speed
 	move_and_slide()
 
-	_keep_on_track()
 	rotation.y = heading_yaw
 	_update_overrev(delta)
 	_update_engine_sound(throttle)
@@ -291,24 +311,13 @@ func _poll_touch_shifts() -> void:
 		_request_shift(-1)
 
 
-func _keep_on_track() -> void:
+func _update_surface() -> void:
 	var race := get_parent()
 	if race and race.has_method(&"get_race_track"):
 		var track: Node = race.get_race_track()
 		if track != null and track.has_method(&"closest_sample"):
 			var sample: Dictionary = track.closest_sample(global_position)
-			var limit: float = float(track.get_half_width()) - 2.0
-			var lateral: float = float(sample.get("lateral", 0.0))
-			var clamped := clampf(lateral, -limit, limit)
-			if not is_equal_approx(lateral, clamped):
-				var right: Vector3 = sample.get("right", Vector3.RIGHT)
-				var center: Vector3 = sample.get("position", global_position)
-				global_position.x = center.x + right.x * clamped
-				global_position.z = center.z + right.z * clamped
-				forward_speed *= 0.96
+			var limit: float = float(track.get_half_width()) - 1.0
+			_off_road = absf(float(sample.get("lateral", 0.0))) > limit
 			return
-	var px := global_position.x
-	var px_clamped := clampf(px, -TRACK_X_LIMIT, TRACK_X_LIMIT)
-	if not is_equal_approx(px, px_clamped):
-		forward_speed *= 0.96
-	global_position.x = px_clamped
+	_off_road = absf(global_position.x) > TRACK_X_LIMIT

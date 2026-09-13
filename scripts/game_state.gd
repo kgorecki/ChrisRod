@@ -39,10 +39,11 @@ var owned_gearbox_ids: Array[String] = ["gb_auto3"]
 var equipped_gearbox_id: String = "gb_auto3"
 
 ## Opponent presets for selection and race AI.
+## Scales are relative to the player's current effective vmax and 24 m/s² launch.
 const OPPONENTS: Array[Dictionary] = [
-	{"id": 0, "name": "Rival Nova", "accel": 12.0, "vmax": 58.0},
-	{"id": 1, "name": "Street Hawk", "accel": 14.0, "vmax": 62.0},
-	{"id": 2, "name": "Night Runner", "accel": 11.0, "vmax": 60.0},
+	{"id": 0, "name": "Rival Nova", "accel_scale": 0.28, "vmax_scale": 0.86, "shift_time": 0.40},
+	{"id": 1, "name": "Street Hawk", "accel_scale": 0.34, "vmax_scale": 0.94, "shift_time": 0.28},
+	{"id": 2, "name": "Night Runner", "accel_scale": 0.26, "vmax_scale": 0.89, "shift_time": 0.36},
 ]
 
 const PARTS: Array[Dictionary] = [

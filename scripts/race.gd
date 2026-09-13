@@ -32,6 +32,7 @@ var _race_started: bool = false
 @onready var _finish: Area3D = $FinishLine
 
 var _race_over: bool = false
+var _opponent_finished: bool = false
 var _is_road: bool = false
 var _elapsed: float = 0.0
 
@@ -223,11 +224,9 @@ func _on_finish_area_body_entered(body: Node3D) -> void:
 	if _race_over or not _race_started:
 		return
 	if body == _player:
-		_race_over = true
-		_show_result(true)
+		_finish_player()
 	elif body == _opponent:
-		_race_over = true
-		_show_result(false)
+		_opponent_finished = true
 
 
 func _distance_to_finish() -> float:
@@ -243,12 +242,10 @@ func _maybe_finish_by_progress() -> void:
 	var o_rem := INF
 	if _opponent.has_method(&"get_path_s"):
 		o_rem = maxf(0.0, _track.get_length() - _opponent.get_path_s())
-	if p_rem > 1.0 and o_rem > 1.0:
-		return
-	if p_rem <= o_rem:
-		_on_finish_area_body_entered(_player)
-	else:
-		_on_finish_area_body_entered(_opponent)
+	if o_rem <= 1.0:
+		_opponent_finished = true
+	if p_rem <= 1.0:
+		_finish_player()
 
 
 func _update_rpm_meter() -> void:
@@ -263,6 +260,13 @@ func _update_rpm_meter() -> void:
 		_player.get_rpm_critical(),
 		_player.is_engine_blown()
 	)
+
+
+func _finish_player() -> void:
+	if _race_over:
+		return
+	_race_over = true
+	_show_result(not _opponent_finished)
 
 
 func _show_engine_blown() -> void:
