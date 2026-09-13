@@ -1,11 +1,3 @@
-# Production site at https://<user>.github.io/ChrisRod/
-#
-# Pages must be: Settings → Pages → Deploy from a branch → gh-pages / (root).
-# The official "GitHub Actions" Pages source cannot host PR preview folders.
-#
-# Actions must be allowed to write: Settings → Actions → General →
-# Workflow permissions → Read and write permissions.
-
 name: Deploy Godot 4.6.1 to GitHub Pages
 
 on:
@@ -14,10 +6,12 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-  group: production-pages
+  group: pages
   cancel-in-progress: true
 
 jobs:
@@ -28,31 +22,26 @@ jobs:
     needs: export
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    concurrency:
-      group: gh-pages-push
-      cancel-in-progress: false
 
     environment:
       name: github-pages
-      url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
       - name: Download web build
         uses: actions/download-artifact@v4
         with:
           name: web-build
           path: build/web
 
-      - name: Deploy production to gh-pages
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          folder: build/web
-          branch: gh-pages
-          clean: true
-          # Keep PR preview folders when refreshing production.
-          clean-exclude: |
-            pr-preview
-          force: false
+          path: build/web
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
