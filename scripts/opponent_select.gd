@@ -7,6 +7,7 @@ var _road_btn: Button
 
 func _ready() -> void:
 	GameState.current_scene_path = GameState.SCENE_OPPONENT_SELECT
+	GameState.update_music()
 	_hint = $Margin/VBox/Hint
 	_build_race_type_row()
 	_refresh_race_type_ui()

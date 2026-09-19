@@ -8,6 +8,7 @@ extends Control
 
 func _ready() -> void:
 	GameState.current_scene_path = GameState.SCENE_NEWSPAPER
+	GameState.update_music()
 	_refresh()
 
 

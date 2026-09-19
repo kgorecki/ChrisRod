@@ -414,13 +414,9 @@ func update_music() -> void:
 
 
 func _track_for_scene(path: String) -> String:
-	match path:
-		SCENE_GARAGE:
-			return MUSIC_GARAGE
-		SCENE_RACE:
-			return MUSIC_RACE
-		_:
-			return ""
+	if path == SCENE_RACE:
+		return MUSIC_RACE
+	return MUSIC_GARAGE
 
 
 func _get_fullscreen() -> bool:
