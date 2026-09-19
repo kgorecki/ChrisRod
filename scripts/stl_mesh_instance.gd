@@ -3,7 +3,7 @@ extends MeshInstance3D
 ## Runtime STL/GLB loader for Godot projects.
 ## Handles binary and ASCII STL and also instantiates GLB/GLTF scenes at runtime.
 
-@export var stl_path: String = "res://assets/c-1962.glb"
+@export var stl_path: String = "res://assets/cars/c-1962.glb"
 @export var center_model: bool = true
 @export var auto_scale_to_height: float = 5 # meters; set <= 0 to disable
 @export var manual_scale: float = 1.0

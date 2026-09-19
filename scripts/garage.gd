@@ -13,7 +13,7 @@ extends Node3D
 @onready var _calendar_hint: Label = $GarageUI/CalendarHint
 
 var _orbiting: bool = false
-var _yaw: float = 0.0
+var _yaw: float = -PI * 0.5
 var _pitch: float = 0.35
 var _cam_distance: float = 7.0
 var _cam_distance_target: float = 7.0
@@ -49,8 +49,10 @@ func _ready() -> void:
 	$InteractClock.set_meta(&"garage_interact", &"clock")
 	$InteractDesk/InteractChart.set_meta(&"garage_interact", &"chart")
 	$InteractDesk/InteractNewspaper.set_meta(&"garage_interact", &"newspaper")
+	$InteractDesk/Shelf/Radio.set_meta(&"garage_interact", &"radio")
 	$InteractDoors.set_meta(&"garage_interact", &"doors")
 	$InteractSprayPistol.set_meta(&"garage_interact", &"spray")
+	GameState.update_music()
 	_calendar.set_meta(&"garage_interact", &"calendar")
 	_calendar_home = _calendar.global_transform
 	_build_calendar_page()
@@ -286,6 +288,8 @@ func _handle_interact(kind: Variant) -> void:
 			_show_stats()
 		&"newspaper":
 			get_tree().change_scene_to_file(GameState.SCENE_NEWSPAPER)
+		&"radio":
+			GameState.toggle_music()
 		&"doors":
 			get_tree().change_scene_to_file(GameState.SCENE_OPPONENT_SELECT)
 		&"spray":

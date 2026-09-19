@@ -1,0 +1,5 @@
+assets/music/garage.mp3 filter=lfs diff=lfs merge=lfs -text
+assets/music/race.mp3 filter=lfs diff=lfs merge=lfs -text
+assets/cars/c-1962.glb filter=lfs diff=lfs merge=lfs -text
+assets/cars/vette-c1.glb filter=lfs diff=lfs merge=lfs -text
+assets/parts/wheel-c1.glb filter=lfs diff=lfs merge=lfs -text

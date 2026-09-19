@@ -1,6 +1,10 @@
 extends Control
 
 
+func _ready() -> void:
+	GameState.update_music()
+
+
 func _on_new_game_pressed() -> void:
 	GameState.new_game()
 	GameState.current_scene_path = GameState.SCENE_GARAGE
@@ -27,7 +31,7 @@ func _on_load_game_pressed() -> void:
 
 
 func _on_settings_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/settings.tscn")
+	get_tree().change_scene_to_file(GameState.SCENE_SETTINGS)
 
 
 func _on_exit_pressed() -> void:

@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://damusmeuof56y"
-path="res://.godot/imported/vette-c1.glb-31ece15875dfeebb1097a9d5e78ffe78.scn"
+path="res://.godot/imported/vette-c1.glb-d5d893129c40a3f2d6147af1a7da980e.scn"
 
 [deps]
 
-source_file="res://assets/vette-c1.glb"
-dest_files=["res://.godot/imported/vette-c1.glb-31ece15875dfeebb1097a9d5e78ffe78.scn"]
+source_file="res://assets/cars/vette-c1.glb"
+dest_files=["res://.godot/imported/vette-c1.glb-d5d893129c40a3f2d6147af1a7da980e.scn"]
 
 [params]
 
@@ -39,4 +39,4 @@ materials/extract_format=0
 materials/extract_path=""
 _subresources={}
 gltf/naming_version=2
-gltf/embedded_image_handling=1
+gltf/embedded_image_handling=3

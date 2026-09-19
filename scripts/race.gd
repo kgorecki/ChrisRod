@@ -47,6 +47,7 @@ const _ON_GREEN := Color(0.2, 0.95, 0.28, 1)
 
 func _ready() -> void:
 	GameState.current_scene_path = GameState.SCENE_RACE
+	GameState.update_music()
 	_is_road = GameState.selected_race_type == GameState.RACE_ROAD
 	_setup_race_layout()
 	_result.visible = false

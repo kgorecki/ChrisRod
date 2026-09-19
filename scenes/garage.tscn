@@ -51,28 +51,6 @@ albedo_color = Color(0.35, 0.22, 0.12, 1)
 [sub_resource type="BoxShape3D" id="DeskShape"]
 size = Vector3(2.2, 0.9, 1.1)
 
-[sub_resource type="BoxMesh" id="DoorMesh"]
-size = Vector3(6, 6.4, 0.25)
-
-[sub_resource type="StandardMaterial3D" id="DoorMat"]
-albedo_color = Color(0.28, 0.3, 0.34, 1)
-metallic = 0.2
-
-[sub_resource type="BoxShape3D" id="DoorShape"]
-size = Vector3(6, 6.4, 0.25)
-
-[sub_resource type="BoxMesh" id="SprayMesh"]
-size = Vector3(0.18, 0.38, 0.08)
-
-[sub_resource type="StandardMaterial3D" id="SprayMat"]
-albedo_color = Color(0.17261633, 0.047378488, 0.99999994, 1)
-metallic = 0.8
-metallic_specular = 0.92
-roughness = 0.4
-
-[sub_resource type="BoxShape3D" id="SprayShape"]
-size = Vector3(0.18, 0.38, 0.08)
-
 [sub_resource type="StandardMaterial3D" id="ChartBackMat"]
 albedo_color = Color(0.28, 0.24, 0.18, 1)
 
@@ -206,6 +184,103 @@ size = Vector3(0.64, 0.14, 0.008)
 [sub_resource type="BoxShape3D" id="CalShape"]
 size = Vector3(0.76, 0.98, 0.12)
 
+[sub_resource type="BoxMesh" id="DoorMesh"]
+size = Vector3(6, 6.4, 0.25)
+
+[sub_resource type="StandardMaterial3D" id="DoorMat"]
+albedo_color = Color(0.28, 0.3, 0.34, 1)
+metallic = 0.2
+
+[sub_resource type="BoxShape3D" id="DoorShape"]
+size = Vector3(6, 6.4, 0.25)
+
+[sub_resource type="BoxMesh" id="SprayMesh"]
+size = Vector3(0.18, 0.38, 0.08)
+
+[sub_resource type="StandardMaterial3D" id="SprayMat"]
+albedo_color = Color(0.17261633, 0.047378488, 0.99999994, 1)
+metallic = 0.8
+metallic_specular = 0.92
+roughness = 0.4
+
+[sub_resource type="BoxShape3D" id="SprayShape"]
+size = Vector3(0.18, 0.38, 0.08)
+
+[sub_resource type="StandardMaterial3D" id="ShelfMat"]
+albedo_color = Color(0.32, 0.19, 0.1, 1)
+roughness = 0.82
+
+[sub_resource type="BoxMesh" id="ShelfMesh"]
+material = SubResource("ShelfMat")
+size = Vector3(1.7, 0.05, 0.28)
+
+[sub_resource type="BoxShape3D" id="ShelfShape"]
+size = Vector3(1.7, 0.05, 0.28)
+
+[sub_resource type="StandardMaterial3D" id="ShelfBracketMat"]
+albedo_color = Color(0.24, 0.23, 0.21, 1)
+roughness = 0.7
+
+[sub_resource type="BoxMesh" id="ShelfBracketMesh"]
+material = SubResource("ShelfBracketMat")
+size = Vector3(0.04, 0.14, 0.16)
+
+[sub_resource type="StandardMaterial3D" id="RadioBodyMat"]
+albedo_color = Color(0.22, 0.1, 0.07, 1)
+roughness = 0.55
+
+[sub_resource type="BoxMesh" id="RadioBodyMesh"]
+material = SubResource("RadioBodyMat")
+size = Vector3(0.4, 0.22, 0.18)
+
+[sub_resource type="BoxShape3D" id="RadioShape"]
+size = Vector3(0.42, 0.24, 0.2)
+
+[sub_resource type="StandardMaterial3D" id="RadioSpeakerMat"]
+albedo_color = Color(0.08, 0.08, 0.08, 1)
+roughness = 0.9
+
+[sub_resource type="CylinderMesh" id="RadioSpeakerMesh"]
+material = SubResource("RadioSpeakerMat")
+top_radius = 0.07
+bottom_radius = 0.07
+height = 0.02
+radial_segments = 16
+
+[sub_resource type="StandardMaterial3D" id="RadioDialMat"]
+albedo_color = Color(0.9, 0.82, 0.55, 1)
+roughness = 0.35
+
+[sub_resource type="CylinderMesh" id="RadioDialMesh"]
+material = SubResource("RadioDialMat")
+top_radius = 0.035
+bottom_radius = 0.035
+height = 0.018
+radial_segments = 16
+
+[sub_resource type="StandardMaterial3D" id="RadioKnobMat"]
+albedo_color = Color(0.12, 0.12, 0.13, 1)
+roughness = 0.45
+
+[sub_resource type="CylinderMesh" id="RadioKnobMesh"]
+material = SubResource("RadioKnobMat")
+top_radius = 0.016
+bottom_radius = 0.018
+height = 0.02
+radial_segments = 12
+
+[sub_resource type="StandardMaterial3D" id="RadioAntennaMat"]
+albedo_color = Color(0.55, 0.55, 0.58, 1)
+metallic = 0.75
+roughness = 0.3
+
+[sub_resource type="CylinderMesh" id="RadioAntennaMesh"]
+material = SubResource("RadioAntennaMat")
+top_radius = 0.004
+bottom_radius = 0.005
+height = 0.28
+radial_segments = 8
+
 [node name="Garage" type="Node3D" unique_id=3918559]
 script = ExtResource("1")
 
@@ -221,6 +296,7 @@ shadow_enabled = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.15, 0)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Floor" unique_id=1102137988]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.1525574e-06, -0.01594019, 1.5258789e-05)
 mesh = SubResource("FloorMesh")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor" unique_id=1435707338]
@@ -242,99 +318,151 @@ transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0, 0, 
 shape = SubResource("ClockShape")
 
 [node name="InteractDesk" type="StaticBody3D" parent="." unique_id=691586932]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0.45, 1.2)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 6.3, 0.45, 1.8)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="InteractDesk" unique_id=213402081]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0341818, 0, 0)
 mesh = SubResource("DeskMesh")
 surface_material_override/0 = SubResource("DeskMat")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk" unique_id=864220574]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0341818, 0, 0)
 shape = SubResource("DeskShape")
 
-[node name="InteractChart" type="StaticBody3D" parent="InteractDesk"]
+[node name="InteractChart" type="StaticBody3D" parent="InteractDesk" unique_id=1811908652]
 transform = Transform3D(0.951057, 0, 0.309017, 0, 1, 0, -0.309017, 0, 0.951057, -0.78, 0.462, 0.06)
 
-[node name="Backing" type="MeshInstance3D" parent="InteractDesk/InteractChart"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.006, 0)
+[node name="Backing" type="MeshInstance3D" parent="InteractDesk/InteractChart" unique_id=1307998690]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8856769, -0.0059999824, -0.937613)
 mesh = SubResource("ChartBackMesh")
 
-[node name="Sheet" type="MeshInstance3D" parent="InteractDesk/InteractChart"]
+[node name="Sheet" type="MeshInstance3D" parent="InteractDesk/InteractChart" unique_id=1118962368]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8856769, 0, -0.937613)
 mesh = SubResource("ChartMesh")
 
-[node name="Line1" type="MeshInstance3D" parent="InteractDesk/InteractChart"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, -0.12)
+[node name="Line1" type="MeshInstance3D" parent="InteractDesk/InteractChart" unique_id=778358881]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8856764, 0.00999999, -1.0576129)
 mesh = SubResource("ChartLineMesh")
 
-[node name="Line2" type="MeshInstance3D" parent="InteractDesk/InteractChart"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0)
+[node name="Line2" type="MeshInstance3D" parent="InteractDesk/InteractChart" unique_id=1255210929]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8856769, 0.00999999, -0.937613)
 mesh = SubResource("ChartLineMesh")
 
-[node name="Line3" type="MeshInstance3D" parent="InteractDesk/InteractChart"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0.12)
+[node name="Line3" type="MeshInstance3D" parent="InteractDesk/InteractChart" unique_id=85915735]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8856773, 0.00999999, -0.8176131)
 mesh = SubResource("ChartLineMesh")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk/InteractChart"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk/InteractChart" unique_id=1700931286]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8856769, 0, -0.937613)
 shape = SubResource("ChartShape")
 
-[node name="InteractNewspaper" type="StaticBody3D" parent="InteractDesk"]
+[node name="InteractNewspaper" type="StaticBody3D" parent="InteractDesk" unique_id=23483620]
 transform = Transform3D(0.927184, 0, -0.374607, 0, 1, 0, 0.374607, 0, 0.927184, 0.78, 0.46, -0.04)
 
-[node name="Sheet" type="MeshInstance3D" parent="InteractDesk/InteractNewspaper"]
+[node name="Sheet" type="MeshInstance3D" parent="InteractDesk/InteractNewspaper" unique_id=418300794]
+transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 0.99999994, -2.813243, 0, 1.1366248)
 mesh = SubResource("PaperMesh")
 
-[node name="Masthead" type="MeshInstance3D" parent="InteractDesk/InteractNewspaper"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.012, -0.26)
+[node name="Masthead" type="MeshInstance3D" parent="InteractDesk/InteractNewspaper" unique_id=83492623]
+transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 0.99999994, -2.8132432, 0.012000024, 0.87662506)
 mesh = SubResource("PaperHeadMesh")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk/InteractNewspaper"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk/InteractNewspaper" unique_id=1142989557]
+transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 0.99999994, -2.813243, 0, 1.1366248)
 shape = SubResource("PaperShape")
 
-[node name="Walls" type="Node3D" parent="."]
+[node name="Shelf" type="StaticBody3D" parent="InteractDesk" unique_id=210045001]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.034, 1.27, 0.46)
 
-[node name="WallLeft" type="MeshInstance3D" parent="Walls"]
+[node name="Board" type="MeshInstance3D" parent="InteractDesk/Shelf" unique_id=210045002]
+mesh = SubResource("ShelfMesh")
+
+[node name="BracketLeft" type="MeshInstance3D" parent="InteractDesk/Shelf" unique_id=210045003]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.62, -0.09, 0.05)
+mesh = SubResource("ShelfBracketMesh")
+
+[node name="BracketRight" type="MeshInstance3D" parent="InteractDesk/Shelf" unique_id=210045004]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.62, -0.09, 0.05)
+mesh = SubResource("ShelfBracketMesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk/Shelf" unique_id=210045005]
+shape = SubResource("ShelfShape")
+
+[node name="Radio" type="StaticBody3D" parent="InteractDesk/Shelf" unique_id=210045006]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15, 0.135, 0)
+
+[node name="Body" type="MeshInstance3D" parent="InteractDesk/Shelf/Radio" unique_id=210045007]
+mesh = SubResource("RadioBodyMesh")
+
+[node name="Speaker" type="MeshInstance3D" parent="InteractDesk/Shelf/Radio" unique_id=210045008]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, -0.1, 0.01, -0.09)
+mesh = SubResource("RadioSpeakerMesh")
+
+[node name="Dial" type="MeshInstance3D" parent="InteractDesk/Shelf/Radio" unique_id=210045009]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0.1, 0.035, -0.09)
+mesh = SubResource("RadioDialMesh")
+
+[node name="KnobLeft" type="MeshInstance3D" parent="InteractDesk/Shelf/Radio" unique_id=210045010]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0.07, -0.055, -0.09)
+mesh = SubResource("RadioKnobMesh")
+
+[node name="KnobRight" type="MeshInstance3D" parent="InteractDesk/Shelf/Radio" unique_id=210045011]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0.13, -0.055, -0.09)
+mesh = SubResource("RadioKnobMesh")
+
+[node name="Antenna" type="MeshInstance3D" parent="InteractDesk/Shelf/Radio" unique_id=210045012]
+transform = Transform3D(1, 0, 0, 0, 0.94, -0.342, 0, 0.342, 0.94, 0.16, 0.22, 0.04)
+mesh = SubResource("RadioAntennaMesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk/Shelf/Radio" unique_id=210045013]
+shape = SubResource("RadioShape")
+
+[node name="Walls" type="Node3D" parent="." unique_id=730314795]
+
+[node name="WallLeft" type="MeshInstance3D" parent="Walls" unique_id=581971347]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.05, 3.2, 0)
 mesh = SubResource("WallSideMesh")
 
-[node name="WallRight" type="MeshInstance3D" parent="Walls"]
+[node name="WallRight" type="MeshInstance3D" parent="Walls" unique_id=1262460730]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.05, 3.2, 0)
 mesh = SubResource("WallSideMesh")
 
-[node name="WallBack" type="MeshInstance3D" parent="Walls"]
+[node name="WallBack" type="MeshInstance3D" parent="Walls" unique_id=972699628]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 12.15)
 mesh = SubResource("WallBackMesh")
 
-[node name="WallFrontLeft" type="MeshInstance3D" parent="Walls"]
+[node name="WallFrontLeft" type="MeshInstance3D" parent="Walls" unique_id=658813223]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.025, 3.2, -7.35)
 mesh = SubResource("WallFrontMesh")
 
-[node name="WallFrontRight" type="MeshInstance3D" parent="Walls"]
+[node name="WallFrontRight" type="MeshInstance3D" parent="Walls" unique_id=1452977070]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.025, 3.2, -7.35)
 mesh = SubResource("WallFrontMesh")
 
-[node name="Ceiling" type="MeshInstance3D" parent="Walls"]
+[node name="Ceiling" type="MeshInstance3D" parent="Walls" unique_id=1353422257]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.5, 2.4)
 mesh = SubResource("CeilingMesh")
 
-[node name="CeilingLamp" type="Node3D" parent="Walls"]
+[node name="CeilingLamp" type="Node3D" parent="Walls" unique_id=60808588]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.28, 0)
 
-[node name="Housing" type="MeshInstance3D" parent="Walls/CeilingLamp"]
+[node name="Housing" type="MeshInstance3D" parent="Walls/CeilingLamp" unique_id=207450067]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.12, 0)
 mesh = SubResource("LampHousingMesh")
 
-[node name="Stem" type="MeshInstance3D" parent="Walls/CeilingLamp"]
+[node name="Stem" type="MeshInstance3D" parent="Walls/CeilingLamp" unique_id=1547409475]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.06, 0)
 mesh = SubResource("LampStemMesh")
 
-[node name="Shade" type="MeshInstance3D" parent="Walls/CeilingLamp"]
+[node name="Shade" type="MeshInstance3D" parent="Walls/CeilingLamp" unique_id=1734303632]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.24, 0)
 mesh = SubResource("LampShadeMesh")
 
-[node name="Bulb" type="MeshInstance3D" parent="Walls/CeilingLamp"]
+[node name="Bulb" type="MeshInstance3D" parent="Walls/CeilingLamp" unique_id=54681370]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.22, 0)
 mesh = SubResource("LampBulbMesh")
 
-[node name="OmniLight3D" type="OmniLight3D" parent="Walls/CeilingLamp"]
+[node name="OmniLight3D" type="OmniLight3D" parent="Walls/CeilingLamp" unique_id=520274296]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.28, 0)
 light_color = Color(1, 0.92, 0.72, 1)
 light_energy = 3.4
@@ -343,24 +471,24 @@ shadow_enabled = true
 omni_range = 16.0
 omni_attenuation = 1.2
 
-[node name="InteractCalendar" type="StaticBody3D" parent="."]
+[node name="InteractCalendar" type="StaticBody3D" parent="." unique_id=1660333608]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.2, 2.2, 11.88)
 
-[node name="Board" type="MeshInstance3D" parent="InteractCalendar"]
+[node name="Board" type="MeshInstance3D" parent="InteractCalendar" unique_id=996529591]
 mesh = SubResource("CalBoardMesh")
 
-[node name="Page" type="MeshInstance3D" parent="InteractCalendar"]
+[node name="Page" type="MeshInstance3D" parent="InteractCalendar" unique_id=522486649]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.018)
 mesh = SubResource("CalPageMesh")
 
-[node name="Header" type="MeshInstance3D" parent="InteractCalendar"]
+[node name="Header" type="MeshInstance3D" parent="InteractCalendar" unique_id=1975531614]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, -0.026)
 mesh = SubResource("CalHeadMesh")
 
-[node name="Labels" type="Node3D" parent="InteractCalendar"]
+[node name="Labels" type="Node3D" parent="InteractCalendar" unique_id=48191177]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.03)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractCalendar"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractCalendar" unique_id=659283870]
 shape = SubResource("CalShape")
 
 [node name="InteractDoors" type="StaticBody3D" parent="." unique_id=1496841617]
@@ -550,9 +678,8 @@ text = "Apply"
 layout_mode = 2
 text = "Cancel"
 
-[node name="CalendarHint" type="Label" parent="GarageUI"]
+[node name="CalendarHint" type="Label" parent="GarageUI" unique_id=100129660]
 visible = false
-layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0

@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://lnri4tucalj6"
-path="res://.godot/imported/c-1962.glb-0678a292650ba11d649828fe0c745e48.scn"
+path="res://.godot/imported/c-1962.glb-3e990cc5b3fabf304b494c3036fbdbc7.scn"
 
 [deps]
 
-source_file="res://assets/c-1962.glb"
-dest_files=["res://.godot/imported/c-1962.glb-0678a292650ba11d649828fe0c745e48.scn"]
+source_file="res://assets/cars/c-1962.glb"
+dest_files=["res://.godot/imported/c-1962.glb-3e990cc5b3fabf304b494c3036fbdbc7.scn"]
 
 [params]
 
@@ -39,4 +39,4 @@ materials/extract_format=0
 materials/extract_path=""
 _subresources={}
 gltf/naming_version=2
-gltf/embedded_image_handling=1
+gltf/embedded_image_handling=3

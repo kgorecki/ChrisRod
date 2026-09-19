@@ -8,6 +8,10 @@ const SCENE_GARAGE := "res://scenes/garage.tscn"
 const SCENE_OPPONENT_SELECT := "res://scenes/opponent_select.tscn"
 const SCENE_RACE := "res://scenes/race.tscn"
 const SCENE_NEWSPAPER := "res://scenes/newspaper.tscn"
+const SCENE_SETTINGS := "res://scenes/settings.tscn"
+
+const MUSIC_GARAGE := "res://assets/music/garage.mp3"
+const MUSIC_RACE := "res://assets/music/race.mp3"
 
 const RACE_DRAG := "drag"
 const RACE_ROAD := "road"
@@ -28,6 +32,9 @@ var current_scene_path: String = SCENE_GARAGE
 var selected_opponent_id: int = 0
 ## `RACE_DRAG` (straight quarter mile) or `RACE_ROAD` (turning course).
 var selected_race_type: String = RACE_DRAG
+
+## Whether background music is on. Persisted in settings; also toggled by the garage radio.
+var music_enabled: bool = true
 
 ## Cash on hand for classifieds (parts and used cars).
 var money: int = 2500
@@ -114,7 +121,14 @@ const USED_CARS: Array[Dictionary] = [
 ]
 
 
+var _music_player: AudioStreamPlayer
+var _music_track: String = ""
+
+
 func _ready() -> void:
+	_music_player = AudioStreamPlayer.new()
+	_music_player.name = "MusicPlayer"
+	add_child(_music_player)
 	load_settings()
 
 
@@ -344,6 +358,7 @@ func save_settings() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("display", "fullscreen", _get_fullscreen())
 	cfg.set_value("audio", "master_db", AudioServer.get_bus_volume_db(0))
+	cfg.set_value("audio", "music_enabled", music_enabled)
 	cfg.save(SETTINGS_PATH)
 
 
@@ -358,6 +373,54 @@ func load_settings() -> void:
 		)
 	if cfg.has_section_key("audio", "master_db"):
 		AudioServer.set_bus_volume_db(0, float(cfg.get_value("audio", "master_db")))
+	if cfg.has_section_key("audio", "music_enabled"):
+		music_enabled = bool(cfg.get_value("audio", "music_enabled"))
+
+
+func toggle_music() -> void:
+	set_music_enabled(not music_enabled)
+
+
+func set_music_enabled(enabled: bool) -> void:
+	music_enabled = enabled
+	save_settings()
+	update_music()
+
+
+func update_music() -> void:
+	var scene_path := current_scene_path
+	var tree := get_tree()
+	if tree != null and tree.current_scene != null:
+		var loaded := tree.current_scene.scene_file_path
+		if not loaded.is_empty():
+			scene_path = loaded
+	var track := _track_for_scene(scene_path)
+	if not music_enabled or track.is_empty():
+		if _music_player != null:
+			_music_player.stop()
+		_music_track = ""
+		return
+	if _music_track == track and _music_player.playing:
+		return
+	var stream := load(track)
+	if stream == null:
+		push_warning("Music track missing: " + track)
+		return
+	if stream is AudioStreamMP3:
+		(stream as AudioStreamMP3).loop = true
+	_music_player.stream = stream
+	_music_player.play()
+	_music_track = track
+
+
+func _track_for_scene(path: String) -> String:
+	match path:
+		SCENE_GARAGE:
+			return MUSIC_GARAGE
+		SCENE_RACE:
+			return MUSIC_RACE
+		_:
+			return ""
 
 
 func _get_fullscreen() -> bool:

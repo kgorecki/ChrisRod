@@ -58,6 +58,11 @@ max_value = 1.0
 step = 0.01
 value = 1.0
 
+[node name="MusicCheck" type="CheckBox" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Music"
+
 [node name="BackButton" type="Button" parent="Margin/VBox"]
 custom_minimum_size = Vector2(200, 40)
 layout_mode = 2
@@ -66,4 +71,5 @@ text = "Back to main menu"
 
 [connection signal="toggled" from="Margin/VBox/FullscreenCheck" to="." method="_on_fullscreen_toggled"]
 [connection signal="value_changed" from="Margin/VBox/MasterSlider" to="." method="_on_master_volume_changed"]
+[connection signal="toggled" from="Margin/VBox/MusicCheck" to="." method="_on_music_toggled"]
 [connection signal="pressed" from="Margin/VBox/BackButton" to="." method="_on_back_pressed"]
