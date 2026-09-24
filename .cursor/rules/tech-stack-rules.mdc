@@ -1,0 +1,42 @@
+---
+description: Godot 4.6 boundaries for scenes, GameState, tracks, and assets
+globs: scripts/**/*.gd,scenes/**/*.tscn,project.godot,export_presets.cfg,assets/tracks/**/*.trk
+alwaysApply: false
+---
+
+# Tech stack
+
+Godot 4.6, GDScript only. No C#, GDExtension, or addons. `GameState` in `project.godot` is the only autoload.
+
+## Boundaries
+
+- Pair each screen as `scenes/<name>.tscn` + `scripts/<name>.gd`. Race subsystems stay children of `scenes/race.tscn`.
+- Put cross-scene data on `GameState` (cash, ownership, paint, race type, opponent). Scenes only read or write it, then call `change_scene_to_file`.
+- Keep catalogs (`PARTS`, `GEARBOXES`, `USED_CARS`, `OPPONENTS`) as `const` dictionaries on `GameState`. Courses stay in `assets/tracks/*.trk`, not in code.
+- Share car meshes through `scenes/car_vehicle_visual.tscn`. Load GLB/STL only in `stl_mesh_instance.gd`.
+- Call neighbors with `has_method` (`is_race_started`, `get_race_track`, `sample_at`, `closest_sample`). Do not cast to script types except `TrackFile`.
+- Drive cars with `CharacterBody3D` and `MOTION_MODE_FLOATING`. Do not add `VehicleBody3D`.
+- Read input with raw keys and `race_touch_controls.gd`. Do not add an Input Map.
+- Tag garage clicks with `garage_interact` and barriers with `track_obstacle`.
+
+```gdscript
+# Do
+get_tree().change_scene_to_file(GameState.SCENE_GARAGE)
+
+# Don't
+get_tree().change_scene_to_file("res://scenes/garage.tscn")  # path already lives on GameState
+```
+
+## Imports and files
+
+- Use `res://` constants on `GameState` for scenes and music. Use `user://` only for `savegame.json` and `settings.cfg`.
+- Parse `.trk` with `TrackFile.load_path`. It is not a Godot import. New non-imported extensions belong in `include_filter` in `export_presets.cfg`.
+- Do not add a second autoload, a package manager, or custom shaders.
+
+```gdscript
+# Do
+var data := TrackFile.load_path("res://assets/tracks/track1.trk")
+
+# Don't
+var data = load("res://assets/tracks/track1.trk")  # .trk is plain JSON, not a Resource
+```

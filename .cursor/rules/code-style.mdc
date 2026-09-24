@@ -1,0 +1,48 @@
+---
+description: GDScript formatting, naming, typing, and error returns
+globs: scripts/**/*.gd
+alwaysApply: false
+---
+
+# Code style
+
+Tabs, one level per indent. Static types on variables, parameters, and returns. `snake_case` for files, functions, and variables. `SCREAMING_SNAKE` for constants. Prefix private members with `_`.
+
+## Typing
+
+- Use `:=` when the right-hand type is obvious. Write the type when it is not (`Dictionary`, `Array[String]`, `Variant` from JSON).
+- Check `typeof` before reading JSON. Prefer `Array[Dictionary]` and `Array[String]` over bare `Array`.
+- Type `@onready` and `@export` fields. `class_name` only for shared loaders (`TrackFile`).
+
+```gdscript
+# Do
+var price := int(part.get("price", 0))
+func buy_part(part_id: String) -> String:
+
+# Don't
+var price = part["price"]
+func buy_part(part_id):
+```
+
+## Errors
+
+- File and load failures return `false` and call `push_error` or `push_warning`. Do not use exceptions.
+- Player actions (`buy_part`, `buy_or_equip_gearbox`, `buy_or_select_car`) return `""` on success and a short player-facing string on failure.
+- Guard with early returns. Do not leave empty `if` bodies except an intentional no-op that is already commented.
+
+```gdscript
+# Do
+if f == null:
+	push_error("Could not write save: %s" % SAVE_PATH)
+	return false
+
+# Don't
+if f == null:
+	pass  # swallow the failure
+```
+
+## Names and literals
+
+- Scene paths, music, and race-type strings are constants on `GameState`, not repeated literals.
+- Meta keys and node names use `StringName` (`&"garage_interact"`).
+- Node references come from `@onready` or unique names (`%CashLabel`), not repeated `get_node` strings in `_process`.
