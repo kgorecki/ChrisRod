@@ -191,6 +191,15 @@ func _physics_process(delta: float) -> void:
 		_auto_shift(throttle, brake)
 
 	_update_surface()
+	var blocked := _resolve_track_obstacles()
+	if blocked:
+		forward_speed = 0.0
+		velocity = Vector3.ZERO
+		move_and_slide()
+		rotation.y = heading_yaw
+		_update_overrev(delta)
+		_update_engine_sound(throttle)
+		return
 	var accel_scale := OFFROAD_ACCEL_SCALE if _off_road else 1.0
 	if throttle and _shift_timer <= 0.0:
 		forward_speed += _gear_acceleration() * accel_scale * delta
@@ -210,6 +219,9 @@ func _physics_process(delta: float) -> void:
 	var forward_dir := Vector3(sin(heading_yaw), 0.0, cos(heading_yaw))
 	velocity = forward_dir * forward_speed
 	move_and_slide()
+	if _slide_hit_obstacle():
+		forward_speed = 0.0
+		velocity = Vector3.ZERO
 
 	rotation.y = heading_yaw
 	_update_overrev(delta)
@@ -317,7 +329,46 @@ func _update_surface() -> void:
 		var track: Node = race.get_race_track()
 		if track != null and track.has_method(&"closest_sample"):
 			var sample: Dictionary = track.closest_sample(global_position)
-			var limit: float = float(track.get_half_width()) - 1.0
-			_off_road = absf(float(sample.get("lateral", 0.0))) > limit
+			var lat := float(sample.get("lateral", 0.0))
+			var left_ext := float(sample.get("left_ext", sample.get("half_width", track.get_half_width())))
+			var right_ext := float(sample.get("right_ext", sample.get("half_width", track.get_half_width())))
+			_off_road = lat < -(left_ext - 1.0) or lat > (right_ext - 1.0)
 			return
 	_off_road = absf(global_position.x) > TRACK_X_LIMIT
+
+
+func _resolve_track_obstacles() -> bool:
+	var race := get_parent()
+	if race == null or not race.has_method(&"get_race_track"):
+		return false
+	var track: Node = race.get_race_track()
+	if track == null or not track.has_method(&"closest_sample"):
+		return false
+	var sample: Dictionary = track.closest_sample(global_position)
+	var lat := float(sample.get("lateral", 0.0))
+	var left_ext := float(sample.get("left_ext", 0.0))
+	var right_ext := float(sample.get("right_ext", 0.0))
+	var center: Vector3 = sample.get("position", global_position)
+	var right_v: Vector3 = sample.get("right", Vector3.RIGHT)
+	const EDGE := 0.7
+	var hit := false
+	var safe := global_position
+	if bool(sample.get("obstacle_left", false)) and lat < -left_ext and lat > -(left_ext + EDGE):
+		hit = true
+		safe = center - right_v * maxf(left_ext - 0.5, 0.4)
+	elif bool(sample.get("obstacle_right", false)) and lat > right_ext and lat < right_ext + EDGE:
+		hit = true
+		safe = center + right_v * maxf(right_ext - 0.5, 0.4)
+	if hit:
+		global_position.x = safe.x
+		global_position.z = safe.z
+	return hit
+
+
+func _slide_hit_obstacle() -> bool:
+	for i in get_slide_collision_count():
+		var col := get_slide_collision(i)
+		var collider := col.get_collider()
+		if collider is Node and (collider as Node).has_meta(&"track_obstacle"):
+			return true
+	return false

@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://bfq0jqgnx8c8m"
+path="res://.godot/imported/narrow.obj-8fda2582c267f54102f8fbc35e0b00bb.mesh"
+
+[deps]
+
+files=["res://.godot/imported/narrow.obj-8fda2582c267f54102f8fbc35e0b00bb.mesh"]
+
+source_file="res://assets/signs/narrow.obj"
+dest_files=["res://.godot/imported/narrow.obj-8fda2582c267f54102f8fbc35e0b00bb.mesh", "res://.godot/imported/narrow.obj-8fda2582c267f54102f8fbc35e0b00bb.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false
