@@ -19,6 +19,11 @@ const CHECK_WHITE := Color(0.94, 0.94, 0.92, 1)
 const POST_COLOR := Color(0.12, 0.12, 0.13, 1)
 const ROAD_COLOR := Color(0.18, 0.19, 0.2, 1)
 const TERRAIN_COLOR := Color(0.14, 0.16, 0.13, 1)
+const SIGN_OBJ := "res://assets/signs/narrow.obj"
+const SIGN_TEX_BOTH := "res://assets/signs/narrow-both.png"
+const SIGN_TEX_LEFT := "res://assets/signs/narrow-left.png"
+const SIGN_TEX_RIGHT := "res://assets/signs/narrow-right.png"
+const SIGN_SCALE := 2.0
 
 var _pts: PackedVector3Array = PackedVector3Array()
 var _yaws: PackedFloat32Array = PackedFloat32Array()
@@ -35,6 +40,8 @@ var _seg_road_type: String = "regular"
 var _hint_i: int = 0
 var _road_mi: MeshInstance3D
 var _built: bool = false
+var _sign_mesh: ArrayMesh
+var _sign_textures: Dictionary = {}
 
 
 func is_road_course() -> bool:
@@ -572,33 +579,152 @@ func _add_narrow_sign(
 	left_narrows: bool,
 	right_narrows: bool
 ) -> void:
-	const POST_H := 3.45
+	var mesh := _get_sign_mesh()
+	if mesh == null:
+		return
 	var sign := Node3D.new()
 	sign.name = node_name
 	sign.transform = Transform3D(Basis(Vector3.UP, yaw), world)
+	sign.scale = Vector3(SIGN_SCALE, SIGN_SCALE, SIGN_SCALE)
 	parent.add_child(sign)
-	_add_box(sign, "Post", Vector3(0.11, POST_H, 0.11), _make_mat(POST_COLOR, 0.4), Vector3(0.0, POST_H * 0.5, 0.0))
-	var face := Node3D.new()
-	face.name = "Face"
-	face.position = Vector3(0.0, POST_H - 0.18, -0.08)
-	face.scale = Vector3(2.0, 2.0, 2.0)
-	sign.add_child(face)
-	var border := _add_box(face, "Border", Vector3(1.2, 1.2, 0.03), _make_mat(Color(0.08, 0.08, 0.09), 0.45), Vector3(0.0, 0.0, 0.012))
-	border.rotation.z = PI * 0.25
-	var plate := _add_box(face, "Plate", Vector3(1.02, 1.02, 0.04), _make_mat(Color(0.96, 0.82, 0.08), 0.38), Vector3.ZERO)
-	plate.rotation.z = PI * 0.25
-	_add_narrow_pictogram(face, left_narrows, right_narrows)
+	var mi := MeshInstance3D.new()
+	mi.name = "Mesh"
+	mi.mesh = mesh
+	var plate := StandardMaterial3D.new()
+	plate.albedo_texture = _get_sign_texture(left_narrows, right_narrows)
+	plate.roughness = 0.42
+	plate.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	mi.set_surface_override_material(0, plate)
+	if mesh.get_surface_count() > 1:
+		mi.set_surface_override_material(1, _make_mat(POST_COLOR, 0.4))
+	sign.add_child(mi)
 
 
-func _add_narrow_pictogram(face: Node3D, left_narrows: bool, right_narrows: bool) -> void:
-	var ink := _make_mat(Color(0.07, 0.07, 0.08), 0.5)
-	var z := -0.036
-	var left := _add_box(face, "EdgeL", Vector3(0.075, 0.62, 0.03), ink, Vector3(-0.2, 0.0, z))
+func _sign_texture_path(left_narrows: bool, right_narrows: bool) -> String:
+	if left_narrows and right_narrows:
+		return SIGN_TEX_BOTH
 	if left_narrows:
-		left.rotation.z = -0.42
-	var right := _add_box(face, "EdgeR", Vector3(0.075, 0.62, 0.03), ink, Vector3(0.2, 0.0, z))
-	if right_narrows:
-		right.rotation.z = 0.42
+		return SIGN_TEX_LEFT
+	return SIGN_TEX_RIGHT
+
+
+func _get_sign_texture(left_narrows: bool, right_narrows: bool) -> Texture2D:
+	var path := _sign_texture_path(left_narrows, right_narrows)
+	if _sign_textures.has(path):
+		return _sign_textures[path]
+	var tex: Texture2D = null
+	if ResourceLoader.exists(path):
+		var loaded: Resource = load(path)
+		if loaded is Texture2D:
+			tex = loaded
+	if tex == null:
+		var img := Image.new()
+		if img.load(path) == OK:
+			tex = ImageTexture.create_from_image(img)
+	_sign_textures[path] = tex
+	return tex
+
+
+func _get_sign_mesh() -> ArrayMesh:
+	if _sign_mesh != null:
+		return _sign_mesh
+	_sign_mesh = _load_sign_obj(SIGN_OBJ)
+	return _sign_mesh
+
+
+func _load_sign_obj(path: String) -> ArrayMesh:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_error("[track] Sign mesh not found: %s" % path)
+		return null
+	var verts: PackedVector3Array = PackedVector3Array()
+	var uvs: PackedVector2Array = PackedVector2Array()
+	var plate_v := PackedVector3Array()
+	var plate_n := PackedVector3Array()
+	var plate_uv := PackedVector2Array()
+	var post_v := PackedVector3Array()
+	var post_n := PackedVector3Array()
+	var post_uv := PackedVector2Array()
+	var face_i := 0
+	while not file.eof_reached():
+		var line := file.get_line().strip_edges()
+		if line.begins_with("v "):
+			var p := line.split(" ", false)
+			if p.size() >= 4:
+				verts.append(Vector3(float(p[1]), float(p[2]), float(p[3])))
+		elif line.begins_with("vt "):
+			var p := line.split(" ", false)
+			if p.size() >= 3:
+				uvs.append(Vector2(float(p[1]), 1.0 - float(p[2])))
+		elif line.begins_with("f "):
+			var p := line.split(" ", false)
+			var fv: Array[Vector3] = []
+			var ft: Array[Vector2] = []
+			for k in range(1, p.size()):
+				var idx := String(p[k]).split("/")
+				var vi := int(idx[0]) - 1
+				if vi < 0 or vi >= verts.size():
+					continue
+				fv.append(verts[vi])
+				if idx.size() > 1 and not idx[1].is_empty():
+					var ti := int(idx[1]) - 1
+					ft.append(uvs[ti] if ti >= 0 and ti < uvs.size() else Vector2.ZERO)
+				else:
+					ft.append(Vector2.ZERO)
+			if fv.size() >= 3:
+				if face_i < 6:
+					_append_obj_face(plate_v, plate_n, plate_uv, fv, ft)
+				else:
+					_append_obj_face(post_v, post_n, post_uv, fv, ft)
+			face_i += 1
+	file.close()
+	var mesh := ArrayMesh.new()
+	if not plate_v.is_empty():
+		_add_obj_surface(mesh, plate_v, plate_n, plate_uv)
+	if not post_v.is_empty():
+		_add_obj_surface(mesh, post_v, post_n, post_uv)
+	if mesh.get_surface_count() == 0:
+		push_error("[track] Sign mesh has no faces: %s" % path)
+		return null
+	return mesh
+
+
+func _append_obj_face(
+	out_v: PackedVector3Array,
+	out_n: PackedVector3Array,
+	out_uv: PackedVector2Array,
+	fv: Array[Vector3],
+	ft: Array[Vector2]
+) -> void:
+	var n := (fv[1] - fv[0]).cross(fv[2] - fv[0])
+	if n.length_squared() > 0.000001:
+		n = n.normalized()
+	else:
+		n = Vector3.UP
+	for t in range(1, fv.size() - 1):
+		out_v.append(fv[0])
+		out_v.append(fv[t])
+		out_v.append(fv[t + 1])
+		out_n.append(n)
+		out_n.append(n)
+		out_n.append(n)
+		out_uv.append(ft[0])
+		out_uv.append(ft[t])
+		out_uv.append(ft[t + 1])
+
+
+func _add_obj_surface(
+	mesh: ArrayMesh,
+	vertices: PackedVector3Array,
+	normals: PackedVector3Array,
+	uvs: PackedVector2Array
+) -> void:
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 
 
 func _place_edge_barrier(
