@@ -57,7 +57,10 @@ func _physics_process(delta: float) -> void:
 		var sample: Dictionary = track.sample_at(_path_s)
 		var right: Vector3 = sample.get("right", Vector3.RIGHT)
 		var center: Vector3 = sample.get("position", global_position)
-		var dest := center + right * _lane_x
+		var left_ext := float(sample.get("left_ext", 8.0))
+		var right_ext := float(sample.get("right_ext", 8.0))
+		var lane := clampf(_lane_x, -(left_ext - 1.6), right_ext - 1.6)
+		var dest := center + right * lane
 		velocity = Vector3.ZERO
 		move_and_slide()
 		global_position.x = dest.x

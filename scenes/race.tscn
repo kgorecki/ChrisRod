@@ -111,6 +111,7 @@ script = ExtResource("5")
 
 [node name="RaceTrack" type="Node3D" parent="."]
 script = ExtResource("6")
+track_path = "res://assets/tracks/track1.trk"
 
 [node name="FinishLine" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 402.336)
