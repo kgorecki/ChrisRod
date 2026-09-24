@@ -1,6 +1,6 @@
 extends CharacterBody3D
 
-## Forward speed along world +Z (m/s).
+## Speed along the car's nose (m/s).
 var forward_speed: float = 0.0
 ## Car heading in radians. 0 means pointing along world +Z.
 var heading_yaw: float = 0.0
@@ -18,9 +18,18 @@ const RPM_METER_MAX := 7000.0
 const OVERREV_HOLD_S := 0.55
 
 const WHEELBASE_M := 2.59
-const MAX_STEER_RAD := 0.56 ## ~32° at parking speed.
-const STEER_MIN_SPEED := 1.2 ## Must be rolling (~4 km/h) to turn.
-const HIGH_SPEED_STEER_SCALE := 0.22 ## Tighter lock fades out as speed rises.
+const MAX_STEER_RAD := 0.52 ## ~30° lock.
+const STEER_RESPONSE := 3.2 ## Steering-rack speed, rad/s.
+const MASS_KG := 1360.0
+const CG_HEIGHT_M := 0.48
+const GRAVITY := 9.81
+const MU_DRY := 1.02
+const MU_OFFROAD := 0.48
+## Front-engine C1: nose is heavier, so the CG sits just ahead of the wheelbase midpoint.
+const FRONT_AXLE_FRACTION := 0.46
+const CORNERING_FRONT := 52000.0 ## N/rad, both front tires.
+const CORNERING_REAR := 64000.0
+const GRIP_FADE_SPEED := 2.0 ## Tires need to be rolling before they bite.
 
 ## Half the drag-strip width (m). Past this counts as off-road.
 const TRACK_X_LIMIT := 18.0
@@ -35,7 +44,13 @@ const CAM_BUMPER := 3
 
 @onready var _cam: Camera3D = $RaceCamera
 @onready var _engine_sound: Node = $EngineSound
+@onready var _visual: Node3D = $CarPivot
 var _cam_mode: int = CAM_FAR
+var _steer_angle: float = 0.0
+var _lateral_speed: float = 0.0 ## m/s toward car +X.
+var _yaw_rate: float = 0.0
+var _car_center := Vector3(0.0, 0.0, 1.9)
+var _wheelbase: float = WHEELBASE_M
 var _touch: Node = null
 var _gearbox: Dictionary = {}
 var _gear: int = 0
@@ -46,6 +61,7 @@ var _off_road: bool = false
 
 func _ready() -> void:
 	motion_mode = MOTION_MODE_FLOATING
+	_cache_axles()
 	_apply_camera_mode()
 	_gearbox = GameState.get_equipped_gearbox()
 	_gear = 0
@@ -134,13 +150,76 @@ func get_rpm_critical() -> float:
 	return RPM_CRITICAL
 
 
-func _yaw_rate(steer: float, max_mps: float) -> float:
-	if absf(steer) < 0.01 or forward_speed < STEER_MIN_SPEED:
-		return 0.0
-	var speed_frac := clampf(forward_speed / maxf(max_mps, 1.0), 0.0, 1.0)
-	var steer_scale := lerpf(1.0, HIGH_SPEED_STEER_SCALE, speed_frac)
-	var steer_angle := steer * MAX_STEER_RAD * steer_scale
-	return forward_speed * tan(steer_angle) / WHEELBASE_M
+func _cache_axles() -> void:
+	if _visual == null:
+		return
+	_car_center = _visual.position
+	var rear_wheel := _visual.get_node_or_null("WheelBackLeft") as Node3D
+	var front_wheel := _visual.get_node_or_null("WheelFrontLeft") as Node3D
+	if rear_wheel != null and front_wheel != null:
+		_wheelbase = maxf(front_wheel.position.z - rear_wheel.position.z, 0.5)
+
+
+func _target_steer(steer: float) -> float:
+	return clampf(steer, -1.0, 1.0) * MAX_STEER_RAD
+
+
+## Front tires push the nose; rear tires resist the slide. Grip saturates, so a fast car washes out instead of pivoting.
+func _step_chassis(delta: float, longitudinal_accel: float) -> void:
+	var axle_front := _wheelbase * FRONT_AXLE_FRACTION
+	var axle_rear := _wheelbase - axle_front
+	var mu := MU_OFFROAD if _off_road else MU_DRY
+	var weight := MASS_KG * GRAVITY
+	var transfer := MASS_KG * longitudinal_accel * CG_HEIGHT_M / _wheelbase
+	var fz_front := maxf(weight * axle_rear / _wheelbase - transfer, weight * 0.12)
+	var fz_rear := maxf(weight * axle_front / _wheelbase + transfer, weight * 0.12)
+	var long_front := 0.0
+	var long_rear := MASS_KG * longitudinal_accel
+	if longitudinal_accel < 0.0:
+		long_front = MASS_KG * longitudinal_accel * 0.65
+		long_rear = MASS_KG * longitudinal_accel * 0.35
+
+	var speed := maxf(forward_speed, 0.35)
+	var front_slip := atan2(_lateral_speed + _yaw_rate * axle_front, speed) - _steer_angle
+	var rear_slip := atan2(_lateral_speed - _yaw_rate * axle_rear, speed)
+	var front_force := _tire_force(front_slip, CORNERING_FRONT, fz_front, long_front, mu)
+	var rear_force := _tire_force(rear_slip, CORNERING_REAR, fz_rear, long_rear, mu)
+	var rolling := clampf(forward_speed / GRIP_FADE_SPEED, 0.0, 1.0)
+	front_force *= rolling
+	rear_force *= rolling
+
+	var steer_cos := cos(_steer_angle)
+	var steer_sin := sin(_steer_angle)
+	var lateral_force := front_force * steer_cos + rear_force
+	var yaw_moment := front_force * steer_cos * axle_front - rear_force * axle_rear
+	var inertia := MASS_KG * axle_front * axle_rear
+	_lateral_speed += (lateral_force / MASS_KG - _yaw_rate * forward_speed) * delta
+	_yaw_rate += (yaw_moment / inertia) * delta
+	forward_speed += (-front_force * steer_sin / MASS_KG) * delta
+	if forward_speed < GRIP_FADE_SPEED:
+		var settle := (1.0 - forward_speed / GRIP_FADE_SPEED) * 8.0 * delta
+		_lateral_speed = lerpf(_lateral_speed, 0.0, clampf(settle, 0.0, 1.0))
+		_yaw_rate = lerpf(_yaw_rate, 0.0, clampf(settle, 0.0, 1.0))
+
+
+func _tire_force(slip: float, stiffness: float, normal: float, longitudinal: float, mu: float) -> float:
+	var limit := mu * normal
+	var long_used := clampf(absf(longitudinal) / maxf(limit, 1.0), 0.0, 1.0)
+	var lat_limit := limit * sqrt(maxf(0.0, 1.0 - long_used * long_used))
+	return clampf(-stiffness * slip, -lat_limit, lat_limit)
+
+
+func _stop_slide() -> void:
+	_lateral_speed = 0.0
+	_yaw_rate = 0.0
+
+
+## Yaw about the car mesh. The body origin sits back by the camera, so rotating it in place orbits the car around the view.
+func _apply_heading() -> void:
+	var center_world := global_transform * _car_center
+	rotation.y = heading_yaw
+	var center_now := global_transform * _car_center
+	global_position += center_world - center_now
 
 
 func _steer_input() -> float:
@@ -173,9 +252,11 @@ func _physics_process(delta: float) -> void:
 	var race := get_parent()
 	if race and race.has_method(&"is_race_started") and not race.is_race_started():
 		forward_speed = 0.0
+		_stop_slide()
 		velocity = Vector3.ZERO
 		move_and_slide()
-		rotation.y = heading_yaw
+		_steer_angle = 0.0
+		_apply_heading()
 		_update_engine_sound(false)
 		return
 
@@ -194,12 +275,15 @@ func _physics_process(delta: float) -> void:
 	var blocked := _resolve_track_obstacles()
 	if blocked:
 		forward_speed = 0.0
+		_stop_slide()
 		velocity = Vector3.ZERO
 		move_and_slide()
-		rotation.y = heading_yaw
+		_steer_angle = move_toward(_steer_angle, 0.0, STEER_RESPONSE * delta)
+		_apply_heading()
 		_update_overrev(delta)
 		_update_engine_sound(throttle)
 		return
+	var speed_before := forward_speed
 	var accel_scale := OFFROAD_ACCEL_SCALE if _off_road else 1.0
 	if throttle and _shift_timer <= 0.0:
 		forward_speed += _gear_acceleration() * accel_scale * delta
@@ -214,16 +298,32 @@ func _physics_process(delta: float) -> void:
 		forward_speed = minf(forward_speed, max_mps * OFFROAD_MAX_SPEED_SCALE)
 
 	forward_speed = clampf(forward_speed, 0.0, max_mps)
-	heading_yaw += _yaw_rate(steer, max_mps) * delta
+	var longitudinal_accel := (forward_speed - speed_before) / maxf(delta, 0.0001)
+	var steer_target := _target_steer(steer)
+	if absf(steer) < 0.01:
+		steer_target = 0.0
+	_steer_angle = move_toward(_steer_angle, steer_target, STEER_RESPONSE * delta)
+	_step_chassis(delta, longitudinal_accel)
+	if absf(_steer_angle) < 0.02:
+		var straighten := clampf(12.0 * delta, 0.0, 1.0)
+		_yaw_rate = lerpf(_yaw_rate, 0.0, straighten)
+		_lateral_speed = lerpf(_lateral_speed, 0.0, straighten)
+	var yaw_cap := absf(forward_speed * tan(_steer_angle) / _wheelbase) * 1.2 + 0.08
+	_yaw_rate = clampf(_yaw_rate, -yaw_cap, yaw_cap)
+	_lateral_speed = clampf(_lateral_speed, -forward_speed * 0.45, forward_speed * 0.45)
+	forward_speed = clampf(forward_speed, 0.0, max_mps)
+	heading_yaw += _yaw_rate * delta
 
 	var forward_dir := Vector3(sin(heading_yaw), 0.0, cos(heading_yaw))
-	velocity = forward_dir * forward_speed
+	var right_dir := Vector3(cos(heading_yaw), 0.0, -sin(heading_yaw))
+	velocity = forward_dir * forward_speed + right_dir * _lateral_speed
 	move_and_slide()
 	if _slide_hit_obstacle():
 		forward_speed = 0.0
+		_stop_slide()
 		velocity = Vector3.ZERO
 
-	rotation.y = heading_yaw
+	_apply_heading()
 	_update_overrev(delta)
 	_update_engine_sound(throttle)
 
