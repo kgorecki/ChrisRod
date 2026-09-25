@@ -1,8 +1,25 @@
 extends Control
 
+const _MenuNav := preload("res://scripts/menu_nav.gd")
+
+var _nav = _MenuNav.new()
+
 
 func _ready() -> void:
 	GameState.update_music()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_nav.setup([
+		$Margin/VBox/NewGameButton,
+		$Margin/VBox/SaveGameButton,
+		$Margin/VBox/LoadGameButton,
+		$Margin/VBox/SettingsButton,
+		$Margin/VBox/ExitButton,
+	])
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _nav.handle_event(self, event):
+		accept_event()
 
 
 func _on_new_game_pressed() -> void:

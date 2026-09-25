@@ -1,5 +1,7 @@
 extends Node3D
 
+const _MenuNav := preload("res://scripts/menu_nav.gd")
+
 const QUARTER_MILE_M := 402.336
 
 const COUNTDOWN_RED_S := 1.2
@@ -35,6 +37,7 @@ var _race_over: bool = false
 var _opponent_finished: bool = false
 var _is_road: bool = false
 var _elapsed: float = 0.0
+var _nav = _MenuNav.new()
 
 ## Dim “off” lamp colors (same hue, low value).
 const _DIM_RED := Color(0.12, 0.05, 0.05, 1)
@@ -278,6 +281,7 @@ func _show_engine_blown() -> void:
 	if _rpm_meter != null:
 		_rpm_meter.visible = false
 	_result_text.text = "You stayed in the red too long — the engine is blown."
+	_wire_result_menu()
 
 
 func _show_result(player_won: bool) -> void:
@@ -295,6 +299,23 @@ func _show_result(player_won: bool) -> void:
 		_result_text.text = "You crossed the quarter mile first — you win!"
 	else:
 		_result_text.text = "Your opponent reached the line first — you lose."
+	_wire_result_menu()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _result.visible:
+		return
+	if _nav.handle_event(self, event):
+		var viewport := get_viewport()
+		if viewport != null:
+			viewport.set_input_as_handled()
+
+
+func _wire_result_menu() -> void:
+	_nav.setup([
+		$RaceUI/ResultPanel/Panel/Margin/VBox/GarageBtn,
+		$RaceUI/ResultPanel/Panel/Margin/VBox/MenuBtn,
+	])
 
 
 func _on_back_garage_pressed() -> void:

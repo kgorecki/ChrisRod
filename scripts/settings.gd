@@ -1,5 +1,9 @@
 extends Control
 
+const _MenuNav := preload("res://scripts/menu_nav.gd")
+
+var _nav = _MenuNav.new()
+
 
 func _ready() -> void:
 	var fs := DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
@@ -7,6 +11,18 @@ func _ready() -> void:
 	%MasterSlider.value = db_to_linear(AudioServer.get_bus_volume_db(0))
 	%MusicCheck.set_pressed_no_signal(GameState.music_enabled)
 	GameState.update_music()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_nav.setup([
+		%FullscreenCheck,
+		%MasterSlider,
+		%MusicCheck,
+		$Margin/VBox/BackButton,
+	])
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _nav.handle_event(self, event):
+		accept_event()
 
 
 func _on_back_pressed() -> void:

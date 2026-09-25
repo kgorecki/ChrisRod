@@ -112,30 +112,37 @@ func _apply_mount(node: Node3D, model_path: String, mount: Dictionary, height: f
 
 
 func apply_equipped_wheels() -> void:
-	var wheel: Dictionary = GameState.get_equipped_wheel()
+	apply_wheel_set(GameState.get_equipped_wheel())
+
+
+func apply_wheel_set(wheel: Dictionary) -> void:
 	if wheel.is_empty():
 		return
+	for wname in ["WheelFrontLeft", "WheelFrontRight", "WheelBackLeft", "WheelBackRight"]:
+		apply_wheel_to_mount(get_node_or_null(wname) as Node3D, wheel)
+
+
+func apply_wheel_to_mount(mount: Node3D, wheel: Dictionary) -> void:
+	if mount == null or wheel.is_empty():
+		return
 	var path := str(wheel.get("path", ""))
-	if path.is_empty():
+	if path.is_empty() or mount.get("stl_path") == null:
 		return
 	wheel_scale = float(wheel.get("scale", wheel_scale))
 	var height := float(wheel.get("height", 0.5))
-	var wheel_names := ["WheelFrontLeft", "WheelFrontRight", "WheelBackLeft", "WheelBackRight"]
-	for wname in wheel_names:
-		var mount := get_node_or_null(wname) as Node3D
-		if mount == null or mount.get("stl_path") == null:
-			continue
-		var changed := str(mount.get("stl_path")) != path
-		mount.visible = true
-		mount.set("stl_path", path)
-		mount.set("auto_scale_to_height", height)
-		if changed and mount.has_method(&"load_model"):
-			for child in mount.get_children():
-				mount.remove_child(child)
-				child.free()
-			if mount is MeshInstance3D:
-				(mount as MeshInstance3D).mesh = null
-			mount.call(&"load_model")
+	var changed := str(mount.get("stl_path")) != path
+	mount.visible = true
+	mount.set("stl_path", path)
+	mount.set("auto_scale_to_height", height)
+	if changed and mount.has_method(&"load_model"):
+		for child in mount.get_children():
+			mount.remove_child(child)
+			child.free()
+		if mount is MeshInstance3D:
+			(mount as MeshInstance3D).mesh = null
+		mount.call(&"load_model")
+	if mount is MeshInstance3D:
+		(mount as MeshInstance3D).scale = Vector3.ONE * wheel_scale
 
 
 func _apply_wheel_scale() -> void:

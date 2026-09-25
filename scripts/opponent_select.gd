@@ -1,19 +1,24 @@
 extends Control
 
+const _MenuNav := preload("res://scripts/menu_nav.gd")
+
 var _hint: Label
 var _drag_btn: Button
 var _road_btn: Button
+var _nav = _MenuNav.new()
 
 
 func _ready() -> void:
 	GameState.current_scene_path = GameState.SCENE_OPPONENT_SELECT
 	GameState.update_music()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_hint = $Margin/VBox/Hint
 	_build_race_type_row()
 	_refresh_race_type_ui()
 	var list := %OpponentList as VBoxContainer
 	for child in list.get_children():
 		child.queue_free()
+	var menu_items: Array = [_drag_btn, _road_btn]
 	for i in range(GameState.OPPONENTS.size()):
 		var opp: Dictionary = GameState.OPPONENTS[i]
 		var btn := Button.new()
@@ -21,6 +26,14 @@ func _ready() -> void:
 		btn.custom_minimum_size = Vector2(0, 40)
 		btn.pressed.connect(_on_opponent_chosen.bind(i))
 		list.add_child(btn)
+		menu_items.append(btn)
+	menu_items.append($Margin/VBox/BackButton)
+	_nav.setup(menu_items)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _nav.handle_event(self, event):
+		accept_event()
 
 
 func _build_race_type_row() -> void:

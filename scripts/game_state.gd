@@ -46,6 +46,7 @@ var money: int = 2500
 var current_car_id: String = "basic"
 var owned_car_ids: Array[String] = ["basic"]
 var owned_part_ids: Array[String] = []
+var equipped_part_ids: Array[String] = []
 var owned_gearbox_ids: Array[String] = ["gb_auto3"]
 var equipped_gearbox_id: String = "gb_auto3"
 var owned_engine_ids: Array[String] = ["v8-283"]
@@ -167,6 +168,7 @@ func new_game() -> void:
 	owned_car_ids.clear()
 	owned_car_ids.append("basic")
 	owned_part_ids.clear()
+	equipped_part_ids.clear()
 	owned_gearbox_ids.clear()
 	owned_gearbox_ids.append(DEFAULT_GEARBOX_ID)
 	equipped_gearbox_id = DEFAULT_GEARBOX_ID
@@ -196,6 +198,7 @@ func save_game() -> bool:
 		"current_car_id": current_car_id,
 		"owned_car_ids": owned_car_ids,
 		"owned_part_ids": owned_part_ids,
+		"equipped_part_ids": equipped_part_ids,
 		"owned_gearbox_ids": owned_gearbox_ids,
 		"equipped_gearbox_id": equipped_gearbox_id,
 		"owned_engine_ids": owned_engine_ids,
@@ -246,6 +249,10 @@ func load_game() -> bool:
 	current_car_id = str(d.get("current_car_id", current_car_id))
 	owned_car_ids = _string_array(d.get("owned_car_ids", owned_car_ids))
 	owned_part_ids = _string_array(d.get("owned_part_ids", owned_part_ids))
+	if d.has("equipped_part_ids"):
+		equipped_part_ids = _string_array(d.get("equipped_part_ids", []))
+	else:
+		equipped_part_ids = owned_part_ids.duplicate()
 	owned_gearbox_ids = _string_array(d.get("owned_gearbox_ids", owned_gearbox_ids))
 	equipped_gearbox_id = str(d.get("equipped_gearbox_id", equipped_gearbox_id))
 	owned_engine_ids = _string_array(d.get("owned_engine_ids", owned_engine_ids))
@@ -274,6 +281,10 @@ func listing_by_id(list: Array[Dictionary], item_id: String) -> Dictionary:
 
 func owns_part(part_id: String) -> bool:
 	return owned_part_ids.has(part_id)
+
+
+func is_part_equipped(part_id: String) -> bool:
+	return equipped_part_ids.has(part_id)
 
 
 func owns_car(car_id: String) -> bool:
@@ -345,7 +356,7 @@ func refresh_car_stats() -> void:
 			car_name = str(car_spec.get("name", car_name))
 			vmax_kmh = float(engine.get("vmax", vmax_kmh))
 			engine_power_hp = float(engine.get("hp", engine_power_hp))
-	for part_id in owned_part_ids:
+	for part_id in equipped_part_ids:
 		var part: Dictionary = listing_by_id(PARTS, part_id)
 		if part.is_empty():
 			continue
@@ -358,12 +369,21 @@ func buy_part(part_id: String) -> String:
 	if part.is_empty():
 		return "That part is not in the paper."
 	if owns_part(part_id):
-		return "Already bolted on."
+		return "Already in spare parts."
 	var price := int(part.get("price", 0))
 	if money < price:
 		return "Not enough cash."
 	money -= price
 	owned_part_ids.append(part_id)
+	return ""
+
+
+func equip_part(part_id: String) -> String:
+	if not owns_part(part_id):
+		return "That part is not in spare parts."
+	if is_part_equipped(part_id):
+		return "Already on the car."
+	equipped_part_ids.append(part_id)
 	refresh_car_stats()
 	return ""
 
@@ -373,7 +393,7 @@ func buy_or_equip_gearbox(gearbox_id: String) -> String:
 	if box.is_empty():
 		return "That gearbox is not in the paper."
 	if equipped_gearbox_id == gearbox_id:
-		return "Already bolted on."
+		return "Already on the car."
 	if owns_gearbox(gearbox_id):
 		equipped_gearbox_id = gearbox_id
 		return ""
@@ -382,7 +402,6 @@ func buy_or_equip_gearbox(gearbox_id: String) -> String:
 		return "Not enough cash."
 	money -= price
 	owned_gearbox_ids.append(gearbox_id)
-	equipped_gearbox_id = gearbox_id
 	return ""
 
 
@@ -407,6 +426,7 @@ func _buy_or_equip(list: Array[Dictionary], owned: Array[String], part_id: Strin
 			return "Not enough cash."
 		money -= price
 		owned.append(part_id)
+		return ""
 	if label == "engine":
 		equipped_engine_id = part_id
 	else:

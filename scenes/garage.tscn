@@ -212,10 +212,10 @@ roughness = 0.82
 
 [sub_resource type="BoxMesh" id="ShelfMesh"]
 material = SubResource("ShelfMat")
-size = Vector3(1.7, 0.05, 0.28)
+size = Vector3(2.5, 0.05, 0.28)
 
 [sub_resource type="BoxShape3D" id="ShelfShape"]
-size = Vector3(1.7, 0.05, 0.28)
+size = Vector3(2.5, 0.05, 0.28)
 
 [sub_resource type="StandardMaterial3D" id="ShelfBracketMat"]
 albedo_color = Color(0.24, 0.23, 0.21, 1)
@@ -281,6 +281,55 @@ bottom_radius = 0.005
 height = 0.28
 radial_segments = 8
 
+[sub_resource type="StandardMaterial3D" id="LiftMetalMat"]
+albedo_color = Color(0.18, 0.18, 0.2, 1)
+metallic = 0.74
+roughness = 0.36
+
+[sub_resource type="StandardMaterial3D" id="LiftRedMat"]
+albedo_color = Color(0.72, 0.14, 0.1, 1)
+roughness = 0.48
+
+[sub_resource type="BoxMesh" id="LiftBaseMesh"]
+material = SubResource("LiftMetalMat")
+size = Vector3(0.52, 0.1, 1.28)
+
+[sub_resource type="BoxMesh" id="LiftArmMesh"]
+material = SubResource("LiftRedMat")
+size = Vector3(0.16, 0.08, 0.78)
+
+[sub_resource type="CylinderMesh" id="LiftPadMesh"]
+material = SubResource("LiftMetalMat")
+top_radius = 0.13
+bottom_radius = 0.13
+height = 0.06
+radial_segments = 16
+
+[sub_resource type="BoxMesh" id="LiftHandleMesh"]
+material = SubResource("LiftRedMat")
+size = Vector3(0.045, 0.045, 0.82)
+
+[sub_resource type="CylinderMesh" id="LiftGripMesh"]
+material = SubResource("LiftMetalMat")
+top_radius = 0.028
+bottom_radius = 0.028
+height = 0.22
+radial_segments = 12
+
+[sub_resource type="CylinderMesh" id="LiftCasterMesh"]
+material = SubResource("LiftMetalMat")
+top_radius = 0.055
+bottom_radius = 0.055
+height = 0.045
+radial_segments = 12
+
+[sub_resource type="BoxMesh" id="LiftPostMesh"]
+material = SubResource("LiftMetalMat")
+size = Vector3(0.1, 1.15, 0.1)
+
+[sub_resource type="BoxShape3D" id="LiftShape"]
+size = Vector3(0.7, 1.2, 1.5)
+
 [node name="Garage" type="Node3D" unique_id=3918559]
 script = ExtResource("1")
 
@@ -330,30 +379,28 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0341818, 0, 0)
 shape = SubResource("DeskShape")
 
 [node name="InteractChart" type="StaticBody3D" parent="InteractDesk" unique_id=1811908652]
-transform = Transform3D(0.951057, 0, 0.309017, 0, 1, 0, -0.309017, 0, 0.951057, -0.78, 0.462, 0.06)
+transform = Transform3D(0.951057, 0, 0.309017, 0, 1, 0, -0.309017, 0, 0.951057, -3.65, 0.462, 0.04)
 
 [node name="Backing" type="MeshInstance3D" parent="InteractDesk/InteractChart" unique_id=1307998690]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8856769, -0.0059999824, -0.937613)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.006, 0)
 mesh = SubResource("ChartBackMesh")
 
 [node name="Sheet" type="MeshInstance3D" parent="InteractDesk/InteractChart" unique_id=1118962368]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8856769, 0, -0.937613)
 mesh = SubResource("ChartMesh")
 
 [node name="Line1" type="MeshInstance3D" parent="InteractDesk/InteractChart" unique_id=778358881]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8856764, 0.00999999, -1.0576129)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, -0.12)
 mesh = SubResource("ChartLineMesh")
 
 [node name="Line2" type="MeshInstance3D" parent="InteractDesk/InteractChart" unique_id=1255210929]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8856769, 0.00999999, -0.937613)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0)
 mesh = SubResource("ChartLineMesh")
 
 [node name="Line3" type="MeshInstance3D" parent="InteractDesk/InteractChart" unique_id=85915735]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8856773, 0.00999999, -0.8176131)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0.12)
 mesh = SubResource("ChartLineMesh")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk/InteractChart" unique_id=1700931286]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8856769, 0, -0.937613)
 shape = SubResource("ChartShape")
 
 [node name="InteractNewspaper" type="StaticBody3D" parent="InteractDesk" unique_id=23483620]
@@ -372,24 +419,24 @@ transform = Transform3D(0.99999994, 0, 0, 0, 1, 0, 0, 0, 0.99999994, -2.813243, 
 shape = SubResource("PaperShape")
 
 [node name="Shelf" type="StaticBody3D" parent="InteractDesk" unique_id=210045001]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.034, 1.27, 0.46)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.634, 1.27, 0.46)
 
 [node name="Board" type="MeshInstance3D" parent="InteractDesk/Shelf" unique_id=210045002]
 mesh = SubResource("ShelfMesh")
 
 [node name="BracketLeft" type="MeshInstance3D" parent="InteractDesk/Shelf" unique_id=210045003]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.62, -0.09, 0.05)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.05, -0.09, 0.05)
 mesh = SubResource("ShelfBracketMesh")
 
 [node name="BracketRight" type="MeshInstance3D" parent="InteractDesk/Shelf" unique_id=210045004]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.62, -0.09, 0.05)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.05, -0.09, 0.05)
 mesh = SubResource("ShelfBracketMesh")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk/Shelf" unique_id=210045005]
 shape = SubResource("ShelfShape")
 
 [node name="Radio" type="StaticBody3D" parent="InteractDesk/Shelf" unique_id=210045006]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15, 0.135, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.25, 0.135, 0)
 
 [node name="Body" type="MeshInstance3D" parent="InteractDesk/Shelf/Radio" unique_id=210045007]
 mesh = SubResource("RadioBodyMesh")
@@ -416,6 +463,52 @@ mesh = SubResource("RadioAntennaMesh")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk/Shelf/Radio" unique_id=210045013]
 shape = SubResource("RadioShape")
+
+[node name="ShelfOther" type="StaticBody3D" parent="InteractDesk" unique_id=210046001]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.634, 1.27, 0.46)
+
+[node name="Board" type="MeshInstance3D" parent="InteractDesk/ShelfOther" unique_id=210046002]
+mesh = SubResource("ShelfMesh")
+
+[node name="BracketLeft" type="MeshInstance3D" parent="InteractDesk/ShelfOther" unique_id=210046003]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.05, -0.09, 0.05)
+mesh = SubResource("ShelfBracketMesh")
+
+[node name="BracketRight" type="MeshInstance3D" parent="InteractDesk/ShelfOther" unique_id=210046004]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.05, -0.09, 0.05)
+mesh = SubResource("ShelfBracketMesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk/ShelfOther" unique_id=210046005]
+shape = SubResource("ShelfShape")
+
+[node name="InteractFolder" type="StaticBody3D" parent="InteractDesk/ShelfOther" unique_id=210046010]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0.34, 0)
+
+[node name="Backing" type="MeshInstance3D" parent="InteractDesk/ShelfOther/InteractFolder" unique_id=210046011]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.006, 0)
+mesh = SubResource("ChartBackMesh")
+
+[node name="Sheet" type="MeshInstance3D" parent="InteractDesk/ShelfOther/InteractFolder" unique_id=210046012]
+mesh = SubResource("ChartMesh")
+
+[node name="Sheet2" type="MeshInstance3D" parent="InteractDesk/ShelfOther/InteractFolder" unique_id=210046013]
+transform = Transform3D(0.996195, 0, 0.087156, 0, 1, 0, -0.087156, 0, 0.996195, 0.01, 0.008, 0.01)
+mesh = SubResource("ChartMesh")
+
+[node name="Line1" type="MeshInstance3D" parent="InteractDesk/ShelfOther/InteractFolder" unique_id=210046014]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.014, -0.12)
+mesh = SubResource("ChartLineMesh")
+
+[node name="Line2" type="MeshInstance3D" parent="InteractDesk/ShelfOther/InteractFolder" unique_id=210046015]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.014, 0)
+mesh = SubResource("ChartLineMesh")
+
+[node name="Line3" type="MeshInstance3D" parent="InteractDesk/ShelfOther/InteractFolder" unique_id=210046016]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.014, 0.12)
+mesh = SubResource("ChartLineMesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractDesk/ShelfOther/InteractFolder" unique_id=210046017]
+shape = SubResource("ChartShape")
 
 [node name="Walls" type="Node3D" parent="." unique_id=730314795]
 
@@ -510,6 +603,59 @@ surface_material_override/0 = SubResource("SprayMat")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="InteractSprayPistol" unique_id=672364029]
 shape = SubResource("SprayShape")
+
+[node name="InteractLift" type="StaticBody3D" parent="." unique_id=210050001]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.35, 0.06, 1.8)
+
+[node name="Chassis" type="MeshInstance3D" parent="InteractLift" unique_id=210050002]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 0)
+mesh = SubResource("LiftBaseMesh")
+
+[node name="PostFront" type="MeshInstance3D" parent="InteractLift" unique_id=210050003]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16, 0.68, 0.48)
+mesh = SubResource("LiftPostMesh")
+
+[node name="PostRear" type="MeshInstance3D" parent="InteractLift" unique_id=210050004]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16, 0.68, -0.48)
+mesh = SubResource("LiftPostMesh")
+
+[node name="Handle" type="MeshInstance3D" parent="InteractLift" unique_id=210050005]
+transform = Transform3D(0.94, 0, 0.342, 0, 1, 0, -0.342, 0, 0.94, 0.28, 0.16, 0.62)
+mesh = SubResource("LiftHandleMesh")
+
+[node name="Grip" type="MeshInstance3D" parent="InteractLift" unique_id=210050006]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.42, 0.16, 0.98)
+mesh = SubResource("LiftGripMesh")
+
+[node name="LiftArm" type="Node3D" parent="InteractLift" unique_id=210050010]
+
+[node name="Beam" type="MeshInstance3D" parent="InteractLift/LiftArm" unique_id=210050011]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.08, 0.18, 0)
+mesh = SubResource("LiftArmMesh")
+
+[node name="Pad" type="MeshInstance3D" parent="InteractLift/LiftArm" unique_id=210050012]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.08, 0.26, 0)
+mesh = SubResource("LiftPadMesh")
+
+[node name="CasterFL" type="MeshInstance3D" parent="InteractLift" unique_id=210050020]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.2, 0.03, 0.52)
+mesh = SubResource("LiftCasterMesh")
+
+[node name="CasterFR" type="MeshInstance3D" parent="InteractLift" unique_id=210050021]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -0.2, 0.03, 0.52)
+mesh = SubResource("LiftCasterMesh")
+
+[node name="CasterRL" type="MeshInstance3D" parent="InteractLift" unique_id=210050022]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.2, 0.03, -0.52)
+mesh = SubResource("LiftCasterMesh")
+
+[node name="CasterRR" type="MeshInstance3D" parent="InteractLift" unique_id=210050023]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -0.2, 0.03, -0.52)
+mesh = SubResource("LiftCasterMesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractLift" unique_id=210050030]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+shape = SubResource("LiftShape")
 
 [node name="CameraPivot" type="Node3D" parent="." unique_id=82855066]
 

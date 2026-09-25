@@ -1,5 +1,7 @@
 extends Node3D
 
+const _MenuNav := preload("res://scripts/menu_nav.gd")
+
 @onready var _car_pivot: Node3D = $CarPivot
 @onready var _camera_pivot: Node3D = $CameraPivot
 @onready var _camera_pitch: Node3D = $CameraPivot/Pitch
@@ -11,6 +13,8 @@ extends Node3D
 @onready var _spray_color_picker: ColorPicker = $GarageUI/ColorPickerMenu/Panel/Margin/VBox/ColorPicker
 @onready var _calendar: StaticBody3D = $InteractCalendar
 @onready var _calendar_hint: Label = $GarageUI/CalendarHint
+@onready var _lift: StaticBody3D = $InteractLift
+@onready var _lift_arm: Node3D = $InteractLift/LiftArm
 
 var _orbiting: bool = false
 var _yaw: float = -PI * 0.5
@@ -29,12 +33,19 @@ const ZOOM_SMOOTH_SPEED := 12.0
 
 var _stats_label: Label
 var _parts_board: Control
+var _parts_title: Label
 var _parts_list: VBoxContainer
 var _parts_status: Label
+var _parts_show_spares: bool = false
+var _parts_show_wheels: bool = false
+var _lift_home: Transform3D
+var _lift_arm_home: Vector3
+var _wheel_job: bool = false
 var _calendar_home: Transform3D
 var _calendar_blend: float = 0.0
 var _calendar_inspecting: bool = false
 var _calendar_tween: Tween
+var _nav = _MenuNav.new()
 
 const _MONTHS := [
 	"", "January", "February", "March", "April", "May", "June",
@@ -42,6 +53,19 @@ const _MONTHS := [
 ]
 const _WEEKDAYS := ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 const _DAYS_IN_MONTH := [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+const _WHEEL_NODES: Array[String] = [
+	"WheelFrontLeft", "WheelFrontRight", "WheelBackLeft", "WheelBackRight",
+]
+const _LIFT_HEIGHT := 0.42
+const _WHEEL_SIDE_M := 2.6
+const _WHEEL_OUT_Z := -5.4
+const _T_JACK := 1.8
+const _T_LIFT := 1.5
+const _T_DROP := 0.9
+const _T_ROLL_SIDE := 1.6
+const _T_ROLL_LONG := 2.2
+const _T_RISE := 0.85
+const _T_PAUSE := 0.28
 
 func _ready() -> void:
 	GameState.current_scene_path = GameState.SCENE_GARAGE
@@ -52,10 +76,14 @@ func _ready() -> void:
 	_build_parts_board()
 	$InteractClock.set_meta(&"garage_interact", &"clock")
 	$InteractDesk/InteractChart.set_meta(&"garage_interact", &"chart")
+	$InteractDesk/ShelfOther/InteractFolder.set_meta(&"garage_interact", &"spares")
 	$InteractDesk/InteractNewspaper.set_meta(&"garage_interact", &"newspaper")
 	$InteractDesk/Shelf/Radio.set_meta(&"garage_interact", &"radio")
 	$InteractDoors.set_meta(&"garage_interact", &"doors")
 	$InteractSprayPistol.set_meta(&"garage_interact", &"spray")
+	_lift.set_meta(&"garage_interact", &"lift")
+	_lift_home = _lift.global_transform
+	_lift_arm_home = _lift_arm.position
 	GameState.update_music()
 	_calendar.set_meta(&"garage_interact", &"calendar")
 	_calendar_home = _calendar.global_transform
@@ -154,21 +182,43 @@ func _debug_car_mesh() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _wheel_job:
+		_handle_camera_only(event)
+		return
 	if _clock_menu.visible and event.is_action_pressed(&"ui_cancel"):
 		_clock_menu.visible = false
+		_sync_menu_nav()
 		get_viewport().set_input_as_handled()
 		return
 	if _stats_panel.visible and event.is_action_pressed(&"ui_cancel"):
 		_stats_panel.visible = false
+		_sync_menu_nav()
 		get_viewport().set_input_as_handled()
 		return
 	if _spray_menu.visible and event.is_action_pressed(&"ui_cancel"):
 		_spray_menu.visible = false
+		_sync_menu_nav()
+		get_viewport().set_input_as_handled()
+		return
+	if _parts_board != null and _parts_board.visible and event.is_action_pressed(&"ui_cancel"):
+		_hide_parts_board()
 		get_viewport().set_input_as_handled()
 		return
 	if _calendar_inspecting and event.is_action_pressed(&"ui_cancel"):
 		_hang_calendar()
 		get_viewport().set_input_as_handled()
+		return
+
+	if _nav.handle_event(self, event):
+		var viewport := get_viewport()
+		if viewport != null:
+			viewport.set_input_as_handled()
+		return
+
+	if _try_garage_shortcut(event):
+		var viewport := get_viewport()
+		if viewport != null:
+			viewport.set_input_as_handled()
 		return
 
 	if _is_reset_zoom_shortcut(event):
@@ -234,6 +284,131 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+func _handle_camera_only(event: InputEvent) -> void:
+	if event is InputEventMagnifyGesture:
+		var mg := event as InputEventMagnifyGesture
+		var denom := 1.0 + (mg.factor * PINCH_SENSITIVITY)
+		if absf(denom) < 0.0001:
+			return
+		_cam_distance_target = clampf(_cam_distance_target / denom, CAM_DISTANCE_MIN, CAM_DISTANCE_MAX)
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_RIGHT:
+			_orbiting = mb.pressed
+			get_viewport().set_input_as_handled()
+			return
+		if mb.button_index == MOUSE_BUTTON_WHEEL_UP or mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			var factor_any: Variant = mb.get(&"factor")
+			var raw_factor: float = 1.0
+			if typeof(factor_any) == TYPE_FLOAT or typeof(factor_any) == TYPE_INT:
+				raw_factor = float(factor_any)
+			var factor := absf(raw_factor)
+			if factor < 0.0001:
+				factor = 1.0
+			var dir := -1.0 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1.0
+			if raw_factor < 0.0:
+				dir *= -1.0
+			_cam_distance_target = clampf(
+				_cam_distance_target + dir * ZOOM_STEP * factor,
+				CAM_DISTANCE_MIN,
+				CAM_DISTANCE_MAX
+			)
+			get_viewport().set_input_as_handled()
+		return
+	if event is InputEventMouseMotion and _orbiting:
+		var mm := event as InputEventMouseMotion
+		_yaw -= mm.relative.x * 0.005
+		_pitch = clampf(_pitch - mm.relative.y * 0.005, 0.1, 1.2)
+		_update_camera_transform()
+		get_viewport().set_input_as_handled()
+
+
+func _try_garage_shortcut(event: InputEvent) -> bool:
+	if not event is InputEventKey:
+		return false
+	var key := event as InputEventKey
+	if not key.pressed or key.echo:
+		return false
+	if key.ctrl_pressed or key.meta_pressed or key.alt_pressed:
+		return false
+	if _gui_has_text_focus():
+		return false
+	match key.keycode:
+		KEY_N:
+			_handle_interact(&"newspaper")
+		KEY_M:
+			GameState.toggle_music()
+		KEY_P:
+			if _spray_menu.visible:
+				_spray_menu.visible = false
+			else:
+				_show_spray_picker()
+		KEY_D:
+			_handle_interact(&"doors")
+		KEY_X:
+			if _calendar_inspecting:
+				_hang_calendar()
+			else:
+				_bring_calendar_forward()
+		KEY_Q:
+			if _clock_menu.visible:
+				_clock_menu.visible = false
+			else:
+				_hide_garage_overlays()
+				_clock_menu.visible = true
+		KEY_I:
+			if _stats_panel.visible:
+				_stats_panel.visible = false
+			else:
+				_show_stats()
+		KEY_L:
+			if _parts_board != null and _parts_board.visible and _parts_show_wheels:
+				_hide_parts_board()
+			else:
+				_show_wheel_board()
+		_:
+			return false
+	_sync_menu_nav()
+	return true
+
+
+func _gui_has_text_focus() -> bool:
+	var focus := get_viewport().gui_get_focus_owner()
+	return focus is LineEdit or focus is TextEdit
+
+
+func _hide_garage_overlays() -> void:
+	_clock_menu.visible = false
+	_stats_panel.visible = false
+	_spray_menu.visible = false
+	if _parts_board != null:
+		_parts_board.visible = false
+	_sync_menu_nav()
+
+
+func _sync_menu_nav() -> void:
+	if _clock_menu.visible:
+		_nav.setup([
+			$GarageUI/ClockMenu/Panel/Margin/VBox/SaveBtn,
+			$GarageUI/ClockMenu/Panel/Margin/VBox/LoadBtn,
+			$GarageUI/ClockMenu/Panel/Margin/VBox/QuitBtn,
+			$GarageUI/ClockMenu/Panel/Margin/VBox/CloseBtn,
+		])
+	elif _stats_panel.visible:
+		_nav.setup([$GarageUI/StatsPanel/Panel/Margin/VBox/StatsClose])
+	elif _spray_menu.visible:
+		_nav.setup([
+			$GarageUI/ColorPickerMenu/Panel/Margin/VBox/HBox/ConfirmBtn,
+			$GarageUI/ColorPickerMenu/Panel/Margin/VBox/HBox/CancelBtn,
+		])
+	elif _parts_board != null and _parts_board.visible:
+		_nav.setup(_nav.collect_buttons(_parts_board))
+	else:
+		_nav.clear()
+
+
 func _is_reset_zoom_shortcut(event: InputEvent) -> bool:
 	if not event is InputEventKey:
 		return false
@@ -285,11 +460,16 @@ func _raycast(screen_pos: Vector2) -> Dictionary:
 
 
 func _handle_interact(kind: Variant) -> void:
+	if _wheel_job:
+		return
 	match kind:
 		&"clock":
 			_clock_menu.visible = true
+			_sync_menu_nav()
 		&"chart":
 			_show_parts_board()
+		&"spares":
+			_show_spares_board()
 		&"newspaper":
 			get_tree().change_scene_to_file(GameState.SCENE_NEWSPAPER)
 		&"radio":
@@ -300,6 +480,8 @@ func _handle_interact(kind: Variant) -> void:
 			_show_spray_picker()
 		&"calendar":
 			_bring_calendar_forward()
+		&"lift":
+			_show_wheel_board()
 
 
 func _show_spray_picker() -> void:
@@ -308,6 +490,7 @@ func _show_spray_picker() -> void:
 	_stats_panel.visible = false
 	_spray_color_picker.color = GameState.car_color
 	_spray_menu.visible = true
+	_sync_menu_nav()
 
 
 func _on_spray_confirm_pressed() -> void:
@@ -316,10 +499,12 @@ func _on_spray_confirm_pressed() -> void:
 	if _car_pivot.has_method(&"set_car_body_color"):
 		_car_pivot.set_car_body_color(GameState.car_color)
 	_spray_menu.visible = false
+	_sync_menu_nav()
 
 
 func _on_spray_cancel_pressed() -> void:
 	_spray_menu.visible = false
+	_sync_menu_nav()
 
 
 func _build_parts_board() -> void:
@@ -349,9 +534,9 @@ func _build_parts_board() -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
 	margin.add_child(box)
-	var title := Label.new()
-	title.text = "On the car"
-	box.add_child(title)
+	_parts_title = Label.new()
+	_parts_title.text = "On the car"
+	box.add_child(_parts_title)
 	_parts_status = Label.new()
 	_parts_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(_parts_status)
@@ -372,20 +557,55 @@ func _build_parts_board() -> void:
 
 
 func _show_parts_board() -> void:
+	_parts_show_spares = false
+	_parts_show_wheels = false
 	_clock_menu.visible = false
 	_spray_menu.visible = false
 	_stats_panel.visible = false
 	_rebuild_parts_board()
 	_parts_board.visible = true
+	_sync_menu_nav()
+
+
+func _show_spares_board() -> void:
+	_parts_show_spares = true
+	_parts_show_wheels = false
+	_clock_menu.visible = false
+	_spray_menu.visible = false
+	_stats_panel.visible = false
+	_rebuild_parts_board()
+	_parts_board.visible = true
+	_sync_menu_nav()
+
+
+func _show_wheel_board() -> void:
+	if _wheel_job:
+		return
+	_parts_show_spares = false
+	_parts_show_wheels = true
+	_clock_menu.visible = false
+	_spray_menu.visible = false
+	_stats_panel.visible = false
+	_rebuild_parts_board()
+	_parts_board.visible = true
+	_sync_menu_nav()
 
 
 func _hide_parts_board() -> void:
 	_parts_board.visible = false
+	_sync_menu_nav()
 
 
 func _rebuild_parts_board() -> void:
 	for child in _parts_list.get_children():
 		child.queue_free()
+	if _parts_show_wheels:
+		_rebuild_wheels_list()
+		return
+	if _parts_show_spares:
+		_rebuild_spares_list()
+		return
+	_parts_title.text = "On the car"
 	var engine := GameState.get_equipped_engine()
 	var box: Dictionary = GameState.get_equipped_gearbox()
 	var wheel := GameState.get_equipped_wheel()
@@ -400,11 +620,55 @@ func _rebuild_parts_board() -> void:
 		_parts_list.add_child(_mounted_line("Transmission", _parts_row_text(box, "transmission")))
 	if not wheel.is_empty():
 		_parts_list.add_child(_mounted_line("Wheels", _parts_row_text(wheel, "wheels")))
-	for part_id in GameState.owned_part_ids:
+	for part_id in GameState.equipped_part_ids:
 		var part: Dictionary = GameState.listing_by_id(GameState.PARTS, part_id)
 		if part.is_empty():
 			continue
 		_parts_list.add_child(_mounted_line("Bolt-on", _parts_row_text(part, "part")))
+
+
+func _rebuild_wheels_list() -> void:
+	_parts_title.text = "Wheels"
+	_parts_status.text = "Pick a set. The jack will change them one corner at a time."
+	var count := 0
+	for wheel in GameState.WHEELS:
+		var wheel_id := str(wheel.get("id", ""))
+		if not GameState.owns_wheel(wheel_id):
+			continue
+		_parts_list.add_child(_parts_row(wheel, "wheels", GameState.equipped_wheel_id))
+		count += 1
+	if count == 0:
+		_parts_status.text = "No wheels on the shelf. Buy a set in the newspaper."
+	elif count == 1 and GameState.owns_wheel(GameState.equipped_wheel_id):
+		_parts_status.text = "Only the wheels on the car are here. Buy another set in the newspaper."
+
+
+func _rebuild_spares_list() -> void:
+	_parts_title.text = "Spare parts"
+	_parts_status.text = "Bought, not on the car."
+	var count := 0
+	for engine in GameState.ENGINES:
+		var engine_id := str(engine.get("id", ""))
+		if GameState.owns_engine(engine_id) and engine_id != GameState.equipped_engine_id:
+			_parts_list.add_child(_parts_row(engine, "engine", GameState.equipped_engine_id))
+			count += 1
+	for box in GameState.GEARBOXES:
+		var box_id := str(box.get("id", ""))
+		if GameState.owns_gearbox(box_id) and box_id != GameState.equipped_gearbox_id:
+			_parts_list.add_child(_parts_row(box, "transmission", GameState.equipped_gearbox_id))
+			count += 1
+	for wheel in GameState.WHEELS:
+		var wheel_id := str(wheel.get("id", ""))
+		if GameState.owns_wheel(wheel_id) and wheel_id != GameState.equipped_wheel_id:
+			_parts_list.add_child(_parts_row(wheel, "wheels", GameState.equipped_wheel_id))
+			count += 1
+	for part in GameState.PARTS:
+		var part_id := str(part.get("id", ""))
+		if GameState.owns_part(part_id) and not GameState.is_part_equipped(part_id):
+			_parts_list.add_child(_parts_row(part, "part", ""))
+			count += 1
+	if count == 0:
+		_parts_status.text = "The folder is empty. Parts you buy land here until you fit them."
 
 
 func _mounted_line(slot: String, detail: String) -> Label:
@@ -429,7 +693,7 @@ func _parts_row(item: Dictionary, kind: String, equipped_id: String) -> HBoxCont
 	row.add_child(label)
 	var btn := Button.new()
 	var owned := _parts_owned(kind, part_id)
-	var fitted := part_id == equipped_id or (kind == "part" and owned)
+	var fitted := part_id == equipped_id or (kind == "part" and GameState.is_part_equipped(part_id))
 	if fitted:
 		btn.text = "On the car"
 		btn.disabled = true
@@ -477,24 +741,29 @@ func _on_fit_part(kind: String, part_id: String) -> void:
 		"transmission":
 			err = GameState.buy_or_equip_gearbox(part_id)
 		"wheels":
+			if GameState.owns_wheel(part_id) and part_id != GameState.equipped_wheel_id:
+				_hide_parts_board()
+				_start_wheel_change(part_id)
+				return
 			err = GameState.buy_or_equip_wheel(part_id)
-			if err.is_empty() and _car_pivot.has_method(&"apply_equipped_wheels"):
-				_car_pivot.call(&"apply_equipped_wheels")
 		"part":
-			err = GameState.buy_part(part_id)
+			err = GameState.equip_part(part_id)
 	if not err.is_empty():
 		_parts_status.text = err
 	_rebuild_parts_board()
+	if _parts_board.visible:
+		_sync_menu_nav()
 
 
 func _show_stats() -> void:
+	_hide_garage_overlays()
 	var box: Dictionary = GameState.get_equipped_gearbox()
 	var gears: Variant = box.get("ratios", [])
 	var gear_count := 0
 	if typeof(gears) == TYPE_ARRAY:
 		gear_count = gears.size()
 	var kind := "automatic" if bool(box.get("automatic", false)) else "manual"
-	var t := "Car: %s\n\nVmax: %.0f km/h\nEngine power: %.0f hp\nGearbox: %s\n%s, %d gears" % [
+	var t := "Car: %s\n\nTop speed: %.0f km/h\nEngine power: %.0f hp\nGearbox: %s\n%s, %d gears" % [
 		GameState.car_name,
 		GameState.get_effective_vmax_kmh(),
 		GameState.engine_power_hp,
@@ -504,6 +773,7 @@ func _show_stats() -> void:
 	]
 	_stats_label.text = t
 	_stats_panel.visible = true
+	_sync_menu_nav()
 
 
 func _on_clock_save_pressed() -> void:
@@ -511,25 +781,177 @@ func _on_clock_save_pressed() -> void:
 	if GameState.save_game():
 		pass
 	_clock_menu.visible = false
+	_sync_menu_nav()
 
 
 func _on_clock_load_pressed() -> void:
 	if GameState.load_game():
 		GameState.go_to_saved_scene(get_tree())
 	_clock_menu.visible = false
+	_sync_menu_nav()
 
 
 func _on_clock_quit_menu_pressed() -> void:
 	get_tree().change_scene_to_file(GameState.SCENE_MAIN_MENU)
 	_clock_menu.visible = false
+	_sync_menu_nav()
 
 
 func _on_clock_close_pressed() -> void:
 	_clock_menu.visible = false
+	_sync_menu_nav()
+
+
+func _start_wheel_change(wheel_id: String) -> void:
+	if _wheel_job:
+		return
+	if not GameState.owns_wheel(wheel_id) or wheel_id == GameState.equipped_wheel_id:
+		return
+	var wheel: Dictionary = GameState.listing_by_id(GameState.WHEELS, wheel_id)
+	if wheel.is_empty():
+		return
+	_wheel_job = true
+	_hide_garage_overlays()
+	await _run_wheel_change(wheel)
+	if not is_instance_valid(self):
+		return
+	_wheel_job = false
+
+
+func _run_wheel_change(wheel: Dictionary) -> void:
+	var car_start := _car_pivot.position
+	var work := Vector3(-2.15, _lift_home.origin.y, 0.12)
+	await _tween_global_pos(_lift, work, _T_JACK)
+	if not is_instance_valid(self):
+		return
+	var lift_to := car_start + Vector3(0.0, _LIFT_HEIGHT, 0.0)
+	var arm_to := _lift_arm_home + Vector3(0.0, _LIFT_HEIGHT, 0.0)
+	await _tween_together(_car_pivot, lift_to, _lift_arm, arm_to, _T_LIFT)
+	if not is_instance_valid(self):
+		return
+	await _pause(_T_PAUSE)
+	var radius := maxf(float(wheel.get("height", 0.5)) * 0.5, 0.18)
+	for wname in _WHEEL_NODES:
+		var mount := _car_pivot.get_node_or_null(wname) as Node3D
+		if mount == null:
+			continue
+		await _swap_one_wheel(mount, wheel, radius)
+		if not is_instance_valid(self):
+			return
+		await _pause(_T_PAUSE)
+	await _tween_together(_car_pivot, car_start, _lift_arm, _lift_arm_home, _T_LIFT)
+	if not is_instance_valid(self):
+		return
+	await _tween_global_xform(_lift, _lift_home, _T_JACK)
+	if not is_instance_valid(self):
+		return
+	var err := GameState.buy_or_equip_wheel(str(wheel.get("id", "")))
+	if err.is_empty() and _car_pivot.has_method(&"apply_equipped_wheels"):
+		_car_pivot.call(&"apply_equipped_wheels")
+	_align_wheels_to_floor()
+
+
+func _swap_one_wheel(mount: Node3D, wheel: Dictionary, radius: float) -> void:
+	var home_local := mount.transform
+	var world_xf := mount.global_transform
+	var axle := world_xf.origin
+	var floor_pos := Vector3(axle.x, axle.y - _LIFT_HEIGHT, axle.z)
+	var side := 1.0 if axle.x >= 0.0 else -1.0
+	var side_pos := Vector3(axle.x + side * _WHEEL_SIDE_M, floor_pos.y, axle.z)
+	var outside := Vector3(side_pos.x, floor_pos.y, _WHEEL_OUT_Z)
+	var parent := mount.get_parent()
+	parent.remove_child(mount)
+	add_child(mount)
+	mount.global_transform = world_xf
+	await _tween_global_pos(mount, floor_pos, _T_DROP)
+	if not is_instance_valid(mount):
+		return
+	await _pause(_T_PAUSE)
+	await _roll_node(mount, side_pos, radius, _T_ROLL_SIDE)
+	if not is_instance_valid(mount):
+		return
+	await _roll_node(mount, outside, radius, _T_ROLL_LONG)
+	if not is_instance_valid(mount):
+		return
+	await _pause(_T_PAUSE)
+	if _car_pivot.has_method(&"apply_wheel_to_mount"):
+		_car_pivot.call(&"apply_wheel_to_mount", mount, wheel)
+	mount.global_transform = Transform3D(world_xf.basis, outside)
+	await _roll_node(mount, side_pos, radius, _T_ROLL_LONG)
+	if not is_instance_valid(mount):
+		return
+	await _roll_node(mount, floor_pos, radius, _T_ROLL_SIDE)
+	if not is_instance_valid(mount):
+		return
+	await _tween_global_pos(mount, axle, _T_RISE)
+	if not is_instance_valid(mount):
+		return
+	remove_child(mount)
+	parent.add_child(mount)
+	mount.transform = home_local
+
+
+func _tween_global_pos(node: Node3D, to: Vector3, duration: float) -> void:
+	var tw := create_tween()
+	tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(node, "global_position", to, duration)
+	await tw.finished
+
+
+func _tween_together(car: Node3D, car_to: Vector3, arm: Node3D, arm_to: Vector3, duration: float) -> void:
+	var tw := create_tween()
+	tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.set_parallel(true)
+	tw.tween_property(car, "position", car_to, duration)
+	tw.tween_property(arm, "position", arm_to, duration)
+	await tw.finished
+
+
+func _tween_global_xform(node: Node3D, to: Transform3D, duration: float) -> void:
+	var tw := create_tween()
+	tw.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(node, "global_transform", to, duration)
+	await tw.finished
+
+
+func _roll_node(node: Node3D, to: Vector3, radius: float, duration: float) -> void:
+	var start_pos := node.global_position
+	var start_basis := node.global_basis
+	var travel := Vector3(to.x - start_pos.x, 0.0, to.z - start_pos.z)
+	var dist := travel.length()
+	var axis := Vector3.RIGHT
+	if dist > 0.001:
+		axis = Vector3.UP.cross(travel / dist)
+		if axis.length() < 0.001:
+			axis = Vector3.RIGHT
+		else:
+			axis = axis.normalized()
+	var safe_r := maxf(radius, 0.08)
+	var tw := create_tween()
+	tw.set_trans(Tween.TRANS_LINEAR)
+	tw.tween_method(
+		_apply_roll.bind(node, start_pos, to, start_basis, axis, dist, safe_r),
+		0.0,
+		1.0,
+		duration
+	)
+	await tw.finished
+
+
+func _pause(seconds: float) -> void:
+	await get_tree().create_timer(seconds).timeout
+
+
+func _apply_roll(node: Node3D, start_pos: Vector3, to: Vector3, start_basis: Basis, axis: Vector3, dist: float, safe_r: float, t: float) -> void:
+	if not is_instance_valid(node):
+		return
+	node.global_position = start_pos.lerp(to, t)
+	node.global_basis = Basis(axis, -(dist * t) / safe_r) * start_basis
 
 
 func _on_stats_close_pressed() -> void:
 	_stats_panel.visible = false
+	_sync_menu_nav()
 
 
 func _bring_calendar_forward() -> void:
