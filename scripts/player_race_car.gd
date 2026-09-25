@@ -51,6 +51,11 @@ var _lateral_speed: float = 0.0 ## m/s toward car +X.
 var _yaw_rate: float = 0.0
 var _car_center := Vector3(0.0, 0.0, 1.9)
 var _wheelbase: float = WHEELBASE_M
+var _mass_kg: float = MASS_KG
+var _cg_height: float = CG_HEIGHT_M
+var _front_axle_fraction: float = FRONT_AXLE_FRACTION
+var _max_steer_rad: float = MAX_STEER_RAD
+var _wheel_grip: float = 3.0
 var _touch: Node = null
 var _gearbox: Dictionary = {}
 var _gear: int = 0
@@ -61,6 +66,7 @@ var _off_road: bool = false
 
 func _ready() -> void:
 	motion_mode = MOTION_MODE_FLOATING
+	_apply_car_spec()
 	_cache_axles()
 	_apply_camera_mode()
 	_gearbox = GameState.get_equipped_gearbox()
@@ -154,36 +160,56 @@ func _cache_axles() -> void:
 	if _visual == null:
 		return
 	_car_center = _visual.position
-	var rear_wheel := _visual.get_node_or_null("WheelBackLeft") as Node3D
-	var front_wheel := _visual.get_node_or_null("WheelFrontLeft") as Node3D
-	if rear_wheel != null and front_wheel != null:
-		_wheelbase = maxf(front_wheel.position.z - rear_wheel.position.z, 0.5)
+
+
+func _apply_car_spec() -> void:
+	var chassis: Variant = GameState.car_spec.get("chassis", {})
+	if typeof(chassis) != TYPE_DICTIONARY or (chassis as Dictionary).is_empty():
+		return
+	var spec: Dictionary = chassis
+	_mass_kg = float(spec.get("mass", _mass_kg))
+	_wheelbase = float(spec.get("wheelbase", _wheelbase))
+	_cg_height = float(spec.get("cg_height", _cg_height))
+	_front_axle_fraction = float(spec.get("front_axle_fraction", _front_axle_fraction))
+	_max_steer_rad = deg_to_rad(float(spec.get("max_steer_deg", rad_to_deg(_max_steer_rad))))
+	var wheel: Dictionary = GameState.get_equipped_wheel()
+	_wheel_grip = clampf(float(wheel.get("grip", 3.0)), 1.0, 5.0)
 
 
 func _target_steer(steer: float) -> float:
-	return clampf(steer, -1.0, 1.0) * MAX_STEER_RAD
+	return clampf(steer, -1.0, 1.0) * _max_steer_rad * _grip_steer_scale()
+
+
+## Grip 3 is the stock tire. Each step is a small accel change and a larger steering change.
+func _grip_accel_scale() -> float:
+	return 1.0 + (_wheel_grip - 3.0) * 0.04
+
+
+func _grip_steer_scale() -> float:
+	return 1.0 + (_wheel_grip - 3.0) * 0.12
 
 
 ## Front tires push the nose; rear tires resist the slide. Grip saturates, so a fast car washes out instead of pivoting.
 func _step_chassis(delta: float, longitudinal_accel: float) -> void:
-	var axle_front := _wheelbase * FRONT_AXLE_FRACTION
+	var axle_front := _wheelbase * _front_axle_fraction
 	var axle_rear := _wheelbase - axle_front
 	var mu := MU_OFFROAD if _off_road else MU_DRY
-	var weight := MASS_KG * GRAVITY
-	var transfer := MASS_KG * longitudinal_accel * CG_HEIGHT_M / _wheelbase
+	var weight := _mass_kg * GRAVITY
+	var transfer := _mass_kg * longitudinal_accel * _cg_height / _wheelbase
 	var fz_front := maxf(weight * axle_rear / _wheelbase - transfer, weight * 0.12)
 	var fz_rear := maxf(weight * axle_front / _wheelbase + transfer, weight * 0.12)
 	var long_front := 0.0
-	var long_rear := MASS_KG * longitudinal_accel
+	var long_rear := _mass_kg * longitudinal_accel
 	if longitudinal_accel < 0.0:
-		long_front = MASS_KG * longitudinal_accel * 0.65
-		long_rear = MASS_KG * longitudinal_accel * 0.35
+		long_front = _mass_kg * longitudinal_accel * 0.65
+		long_rear = _mass_kg * longitudinal_accel * 0.35
 
 	var speed := maxf(forward_speed, 0.35)
 	var front_slip := atan2(_lateral_speed + _yaw_rate * axle_front, speed) - _steer_angle
 	var rear_slip := atan2(_lateral_speed - _yaw_rate * axle_rear, speed)
-	var front_force := _tire_force(front_slip, CORNERING_FRONT, fz_front, long_front, mu)
-	var rear_force := _tire_force(rear_slip, CORNERING_REAR, fz_rear, long_rear, mu)
+	var steer_grip := _grip_steer_scale()
+	var front_force := _tire_force(front_slip, CORNERING_FRONT * steer_grip, fz_front, long_front, mu)
+	var rear_force := _tire_force(rear_slip, CORNERING_REAR * steer_grip, fz_rear, long_rear, mu)
 	var rolling := clampf(forward_speed / GRIP_FADE_SPEED, 0.0, 1.0)
 	front_force *= rolling
 	rear_force *= rolling
@@ -192,10 +218,10 @@ func _step_chassis(delta: float, longitudinal_accel: float) -> void:
 	var steer_sin := sin(_steer_angle)
 	var lateral_force := front_force * steer_cos + rear_force
 	var yaw_moment := front_force * steer_cos * axle_front - rear_force * axle_rear
-	var inertia := MASS_KG * axle_front * axle_rear
-	_lateral_speed += (lateral_force / MASS_KG - _yaw_rate * forward_speed) * delta
+	var inertia := _mass_kg * axle_front * axle_rear
+	_lateral_speed += (lateral_force / _mass_kg - _yaw_rate * forward_speed) * delta
 	_yaw_rate += (yaw_moment / inertia) * delta
-	forward_speed += (-front_force * steer_sin / MASS_KG) * delta
+	forward_speed += (-front_force * steer_sin / _mass_kg) * delta
 	if forward_speed < GRIP_FADE_SPEED:
 		var settle := (1.0 - forward_speed / GRIP_FADE_SPEED) * 8.0 * delta
 		_lateral_speed = lerpf(_lateral_speed, 0.0, clampf(settle, 0.0, 1.0))
@@ -286,7 +312,7 @@ func _physics_process(delta: float) -> void:
 	var speed_before := forward_speed
 	var accel_scale := OFFROAD_ACCEL_SCALE if _off_road else 1.0
 	if throttle and _shift_timer <= 0.0:
-		forward_speed += _gear_acceleration() * accel_scale * delta
+		forward_speed += _gear_acceleration() * accel_scale * _grip_accel_scale() * delta
 	elif brake:
 		forward_speed -= BRAKING * delta
 	else:
@@ -308,7 +334,7 @@ func _physics_process(delta: float) -> void:
 		var straighten := clampf(12.0 * delta, 0.0, 1.0)
 		_yaw_rate = lerpf(_yaw_rate, 0.0, straighten)
 		_lateral_speed = lerpf(_lateral_speed, 0.0, straighten)
-	var yaw_cap := absf(forward_speed * tan(_steer_angle) / _wheelbase) * 1.2 + 0.08
+	var yaw_cap := absf(forward_speed * tan(_steer_angle) / _wheelbase) * 1.2 * _grip_steer_scale() + 0.08
 	_yaw_rate = clampf(_yaw_rate, -yaw_cap, yaw_cap)
 	_lateral_speed = clampf(_lateral_speed, -forward_speed * 0.45, forward_speed * 0.45)
 	forward_speed = clampf(forward_speed, 0.0, max_mps)

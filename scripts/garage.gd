@@ -28,6 +28,9 @@ const PINCH_SENSITIVITY := 1.5
 const ZOOM_SMOOTH_SPEED := 12.0
 
 var _stats_label: Label
+var _parts_board: Control
+var _parts_list: VBoxContainer
+var _parts_status: Label
 var _calendar_home: Transform3D
 var _calendar_blend: float = 0.0
 var _calendar_inspecting: bool = false
@@ -46,6 +49,7 @@ func _ready() -> void:
 	_clock_menu.visible = false
 	_stats_panel.visible = false
 	_spray_menu.visible = false
+	_build_parts_board()
 	$InteractClock.set_meta(&"garage_interact", &"clock")
 	$InteractDesk/InteractChart.set_meta(&"garage_interact", &"chart")
 	$InteractDesk/InteractNewspaper.set_meta(&"garage_interact", &"newspaper")
@@ -285,7 +289,7 @@ func _handle_interact(kind: Variant) -> void:
 		&"clock":
 			_clock_menu.visible = true
 		&"chart":
-			_show_stats()
+			_show_parts_board()
 		&"newspaper":
 			get_tree().change_scene_to_file(GameState.SCENE_NEWSPAPER)
 		&"radio":
@@ -316,6 +320,171 @@ func _on_spray_confirm_pressed() -> void:
 
 func _on_spray_cancel_pressed() -> void:
 	_spray_menu.visible = false
+
+
+func _build_parts_board() -> void:
+	var root := Control.new()
+	root.name = "PartsBoard"
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.visible = false
+	root.mouse_filter = Control.MOUSE_FILTER_STOP
+	var dim := ColorRect.new()
+	dim.color = Color(0.05, 0.05, 0.06, 0.55)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.add_child(dim)
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.custom_minimum_size = Vector2(420, 520)
+	panel.offset_left = -210
+	panel.offset_top = -260
+	panel.offset_right = 210
+	panel.offset_bottom = 260
+	root.add_child(panel)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 16)
+	margin.add_theme_constant_override("margin_right", 16)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	panel.add_child(margin)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	margin.add_child(box)
+	var title := Label.new()
+	title.text = "On the car"
+	box.add_child(title)
+	_parts_status = Label.new()
+	_parts_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(_parts_status)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size = Vector2(0, 380)
+	box.add_child(scroll)
+	_parts_list = VBoxContainer.new()
+	_parts_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_parts_list.add_theme_constant_override("separation", 10)
+	scroll.add_child(_parts_list)
+	var close := Button.new()
+	close.text = "Close"
+	close.pressed.connect(_hide_parts_board)
+	box.add_child(close)
+	$GarageUI.add_child(root)
+	_parts_board = root
+
+
+func _show_parts_board() -> void:
+	_clock_menu.visible = false
+	_spray_menu.visible = false
+	_stats_panel.visible = false
+	_rebuild_parts_board()
+	_parts_board.visible = true
+
+
+func _hide_parts_board() -> void:
+	_parts_board.visible = false
+
+
+func _rebuild_parts_board() -> void:
+	for child in _parts_list.get_children():
+		child.queue_free()
+	var engine := GameState.get_equipped_engine()
+	var box: Dictionary = GameState.get_equipped_gearbox()
+	var wheel := GameState.get_equipped_wheel()
+	_parts_status.text = "%s\n%.0f hp · %.0f km/h" % [
+		GameState.car_name,
+		GameState.engine_power_hp,
+		GameState.get_effective_vmax_kmh(),
+	]
+	if not engine.is_empty():
+		_parts_list.add_child(_mounted_line("Engine", _parts_row_text(engine, "engine")))
+	if not box.is_empty():
+		_parts_list.add_child(_mounted_line("Transmission", _parts_row_text(box, "transmission")))
+	if not wheel.is_empty():
+		_parts_list.add_child(_mounted_line("Wheels", _parts_row_text(wheel, "wheels")))
+	for part_id in GameState.owned_part_ids:
+		var part: Dictionary = GameState.listing_by_id(GameState.PARTS, part_id)
+		if part.is_empty():
+			continue
+		_parts_list.add_child(_mounted_line("Bolt-on", _parts_row_text(part, "part")))
+
+
+func _mounted_line(slot: String, detail: String) -> Label:
+	var label := Label.new()
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.text = "%s — %s" % [slot, detail]
+	return label
+
+
+func _parts_heading(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	return label
+
+
+func _parts_row(item: Dictionary, kind: String, equipped_id: String) -> HBoxContainer:
+	var part_id := str(item.get("id", ""))
+	var row := HBoxContainer.new()
+	var label := Label.new()
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.text = _parts_row_text(item, kind)
+	row.add_child(label)
+	var btn := Button.new()
+	var owned := _parts_owned(kind, part_id)
+	var fitted := part_id == equipped_id or (kind == "part" and owned)
+	if fitted:
+		btn.text = "On the car"
+		btn.disabled = true
+	elif owned:
+		btn.text = "Fit"
+		btn.pressed.connect(_on_fit_part.bind(kind, part_id))
+	else:
+		btn.text = "Buy $%d" % int(item.get("price", 0))
+		btn.disabled = GameState.money < int(item.get("price", 0))
+		btn.pressed.connect(_on_fit_part.bind(kind, part_id))
+	row.add_child(btn)
+	return row
+
+
+func _parts_row_text(item: Dictionary, kind: String) -> String:
+	var name := str(item.get("name", "Part"))
+	if kind == "engine":
+		return "%s  %.0f hp" % [name, float(item.get("hp", 0.0))]
+	if kind == "transmission":
+		var kind_name := "auto" if bool(item.get("automatic", false)) else "manual"
+		return "%s  %s" % [name, kind_name]
+	if kind == "part":
+		return "%s  +%d hp" % [name, int(item.get("hp", 0))]
+	return name
+
+
+func _parts_owned(kind: String, part_id: String) -> bool:
+	match kind:
+		"engine":
+			return GameState.owns_engine(part_id)
+		"transmission":
+			return GameState.owns_gearbox(part_id)
+		"wheels":
+			return GameState.owns_wheel(part_id)
+		"part":
+			return GameState.owns_part(part_id)
+	return false
+
+
+func _on_fit_part(kind: String, part_id: String) -> void:
+	var err := ""
+	match kind:
+		"engine":
+			err = GameState.buy_or_equip_engine(part_id)
+		"transmission":
+			err = GameState.buy_or_equip_gearbox(part_id)
+		"wheels":
+			err = GameState.buy_or_equip_wheel(part_id)
+			if err.is_empty() and _car_pivot.has_method(&"apply_equipped_wheels"):
+				_car_pivot.call(&"apply_equipped_wheels")
+		"part":
+			err = GameState.buy_part(part_id)
+	if not err.is_empty():
+		_parts_status.text = err
+	_rebuild_parts_board()
 
 
 func _show_stats() -> void:

@@ -168,10 +168,12 @@ func load_glb_scene() -> void:
 		inst.rotate_z(deg_to_rad(stl_rotation_degrees.z))
 		bbox = get_aabb_recursive(inst)
 
-	# Move to ground
-	var min_y = get_min_y_global(inst) * 50
-	print_debug("[DEBUG GLB][stl_mesh_loader] min_y=", min_y)
-	inst.translate(Vector3(0, -min_y, 0))
+	# Wheel mounts are centered on the axle. Shifting them onto the ground
+	# slides the left and right wheels in opposite directions.
+	if not str(name).begins_with("Wheel"):
+		var min_y = get_min_y_global(inst) * 50
+		print_debug("[DEBUG GLB][stl_mesh_loader] min_y=", min_y)
+		inst.translate(Vector3(0, -min_y, 0))
 
 	#if print_debug:
 		#print("[GLB] Loaded:", stl_path, " scale:", inst.scale, " ground_offset:", offset_y)

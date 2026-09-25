@@ -12,6 +12,10 @@ const SCENE_SETTINGS := "res://scenes/settings.tscn"
 
 const MUSIC_GARAGE := "res://assets/music/garage.mp3"
 const MUSIC_RACE := "res://assets/music/race.mp3"
+const PLAYER_CAR_FILE := "res://assets/cars/corvette-1962-1.car"
+const PARTS_REGISTER := "res://assets/parts/parts.register"
+const _CarFile := preload("res://scripts/car_file.gd")
+const _PartsRegister := preload("res://scripts/parts_register.gd")
 
 const RACE_DRAG := "drag"
 const RACE_ROAD := "road"
@@ -44,6 +48,12 @@ var owned_car_ids: Array[String] = ["basic"]
 var owned_part_ids: Array[String] = []
 var owned_gearbox_ids: Array[String] = ["gb_auto3"]
 var equipped_gearbox_id: String = "gb_auto3"
+var owned_engine_ids: Array[String] = ["v8-283"]
+var equipped_engine_id: String = "v8-283"
+var owned_wheel_ids: Array[String] = ["wheel-c1"]
+var equipped_wheel_id: String = "wheel-c1"
+## Parsed `PLAYER_CAR_FILE`. Empty sections mean the file failed to load.
+var car_spec: Dictionary = {}
 
 ## Opponent presets for selection and race AI.
 ## Scales are relative to the player's current effective vmax and 24 m/s² launch.
@@ -53,68 +63,16 @@ const OPPONENTS: Array[Dictionary] = [
 	{"id": 2, "name": "Night Runner", "accel_scale": 0.26, "vmax_scale": 0.89, "shift_time": 0.36},
 ]
 
-const PARTS: Array[Dictionary] = [
-	{"id": "carb", "name": "Four-barrel carburetor", "price": 450, "hp": 25, "vmax": 4},
-	{"id": "intake", "name": "Performance intake", "price": 320, "hp": 15, "vmax": 2},
-	{"id": "exhaust", "name": "Headers & exhaust", "price": 380, "hp": 18, "vmax": 5},
-	{"id": "cam", "name": "Racing camshaft", "price": 520, "hp": 30, "vmax": 6},
-	{"id": "tires", "name": "Stickier slicks", "price": 280, "hp": 0, "vmax": 8},
-]
-
 const DEFAULT_GEARBOX_ID := "gb_auto3"
 
-## Higher ratio = more launch, lower top speed in that gear.
-## `top_speed` scales the car's vmax; more gears + a taller last gear raise it.
-const GEARBOXES: Array[Dictionary] = [
-	{
-		"id": "gb_auto3",
-		"name": "Automatic 3-speed",
-		"price": 0,
-		"automatic": true,
-		"shift_time": 0.42,
-		"top_speed": 0.82,
-		"ratios": [2.52, 1.52, 1.00],
-	},
-	{
-		"id": "gb_man3",
-		"name": "3-speed manual",
-		"price": 420,
-		"automatic": false,
-		"shift_time": 0.20,
-		"top_speed": 0.88,
-		"ratios": [2.98, 1.58, 1.00],
-	},
-	{
-		"id": "gb_man4",
-		"name": "4-speed manual",
-		"price": 740,
-		"automatic": false,
-		"shift_time": 0.16,
-		"top_speed": 0.95,
-		"ratios": [3.15, 1.92, 1.34, 1.00],
-	},
-	{
-		"id": "gb_man5",
-		"name": "5-speed manual",
-		"price": 1150,
-		"automatic": false,
-		"shift_time": 0.12,
-		"top_speed": 1.00,
-		"ratios": [3.28, 2.08, 1.48, 1.14, 0.89],
-	},
-	{
-		"id": "gb_race5",
-		"name": "5-speed racing",
-		"price": 1850,
-		"automatic": false,
-		"shift_time": 0.07,
-		"top_speed": 1.08,
-		"ratios": [3.55, 2.22, 1.58, 1.18, 0.76],
-	},
-]
+## Filled from `parts.register` at startup. The newspaper sells these lists.
+var PARTS: Array[Dictionary] = []
+var GEARBOXES: Array[Dictionary] = []
+var ENGINES: Array[Dictionary] = []
+var WHEELS: Array[Dictionary] = []
 
 const USED_CARS: Array[Dictionary] = [
-	{"id": "basic", "name": "Basic Car 1", "price": 0, "vmax": 220.0, "hp": 280.0, "color": Color(0.15, 0.45, 0.85, 1.0)},
+	{"id": "basic", "name": "Corvette 1962", "price": 0, "vmax": 220.0, "hp": 280.0, "color": Color(0.15, 0.45, 0.85, 1.0)},
 	{"id": "coupe", "name": "Street Coupe", "price": 1800, "vmax": 235.0, "hp": 300.0, "color": Color(0.72, 0.12, 0.12, 1.0)},
 	{"id": "roadster", "name": "Open Roadster", "price": 2400, "vmax": 245.0, "hp": 320.0, "color": Color(0.92, 0.78, 0.18, 1.0)},
 	{"id": "hotrod", "name": "Shop Hot Rod", "price": 3600, "vmax": 260.0, "hp": 360.0, "color": Color(0.12, 0.12, 0.12, 1.0)},
@@ -130,10 +88,74 @@ func _ready() -> void:
 	_music_player.name = "MusicPlayer"
 	add_child(_music_player)
 	load_settings()
+	load_parts_register()
+	load_player_car()
+
+
+func load_parts_register() -> void:
+	var register: Dictionary = _PartsRegister.load_path(PARTS_REGISTER)
+	var errors: Variant = register.get("errors", [])
+	if typeof(errors) == TYPE_ARRAY:
+		for err in errors:
+			push_error(str(err))
+	PARTS = _dict_list(register.get("parts", []))
+	GEARBOXES = _dict_list(register.get("transmissions", []))
+	ENGINES = _dict_list(register.get("engines", []))
+	WHEELS = _dict_list(register.get("wheels", []))
+
+
+func _dict_list(value: Variant) -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	if typeof(value) != TYPE_ARRAY:
+		return rows
+	for item in value:
+		if typeof(item) == TYPE_DICTIONARY:
+			var row: Dictionary = item
+			rows.append(row)
+	return rows
+
+
+func load_player_car() -> void:
+	car_spec = _CarFile.load_path(PLAYER_CAR_FILE)
+	var errors: Variant = car_spec.get("errors", [])
+	if typeof(errors) == TYPE_ARRAY:
+		for err in errors:
+			push_error(str(err))
+	_ensure_stock_fitment()
+
+
+func _ensure_stock_fitment() -> void:
+	var engine_id := str(get_stock_engine().get("id", equipped_engine_id))
+	var wheel_id := equipped_wheel_id
+	var wheels: Variant = car_spec.get("wheels", {})
+	if typeof(wheels) == TYPE_DICTIONARY:
+		wheel_id = str((wheels as Dictionary).get("part", wheel_id))
+	if not engine_id.is_empty() and not owned_engine_ids.has(engine_id):
+		owned_engine_ids.append(engine_id)
+	if equipped_engine_id.is_empty() or listing_by_id(ENGINES, equipped_engine_id).is_empty():
+		equipped_engine_id = engine_id
+	if not wheel_id.is_empty() and not owned_wheel_ids.has(wheel_id):
+		owned_wheel_ids.append(wheel_id)
+	if equipped_wheel_id.is_empty() or listing_by_id(WHEELS, equipped_wheel_id).is_empty():
+		equipped_wheel_id = wheel_id
+
+
+func get_stock_engine() -> Dictionary:
+	var engine: Variant = car_spec.get("engine", {})
+	if typeof(engine) != TYPE_DICTIONARY:
+		return {}
+	return engine
+
+
+func get_stock_transmission() -> Dictionary:
+	var box: Variant = car_spec.get("transmission", {})
+	if typeof(box) != TYPE_DICTIONARY:
+		return {}
+	return box
 
 
 func new_game() -> void:
-	car_name = "Basic Car 1"
+	car_name = "Corvette 1962"
 	car_color = Color(0.15, 0.45, 0.85, 1.0)
 	vmax_kmh = 220.0
 	engine_power_hp = 280.0
@@ -148,6 +170,11 @@ func new_game() -> void:
 	owned_gearbox_ids.clear()
 	owned_gearbox_ids.append(DEFAULT_GEARBOX_ID)
 	equipped_gearbox_id = DEFAULT_GEARBOX_ID
+	owned_engine_ids.clear()
+	owned_wheel_ids.clear()
+	equipped_engine_id = ""
+	equipped_wheel_id = ""
+	_ensure_stock_fitment()
 	refresh_car_stats()
 
 
@@ -171,6 +198,10 @@ func save_game() -> bool:
 		"owned_part_ids": owned_part_ids,
 		"owned_gearbox_ids": owned_gearbox_ids,
 		"equipped_gearbox_id": equipped_gearbox_id,
+		"owned_engine_ids": owned_engine_ids,
+		"equipped_engine_id": equipped_engine_id,
+		"owned_wheel_ids": owned_wheel_ids,
+		"equipped_wheel_id": equipped_wheel_id,
 	}
 	var json := JSON.stringify(data)
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -217,6 +248,10 @@ func load_game() -> bool:
 	owned_part_ids = _string_array(d.get("owned_part_ids", owned_part_ids))
 	owned_gearbox_ids = _string_array(d.get("owned_gearbox_ids", owned_gearbox_ids))
 	equipped_gearbox_id = str(d.get("equipped_gearbox_id", equipped_gearbox_id))
+	owned_engine_ids = _string_array(d.get("owned_engine_ids", owned_engine_ids))
+	equipped_engine_id = str(d.get("equipped_engine_id", equipped_engine_id))
+	owned_wheel_ids = _string_array(d.get("owned_wheel_ids", owned_wheel_ids))
+	equipped_wheel_id = str(d.get("equipped_wheel_id", equipped_wheel_id))
 	if owned_car_ids.is_empty():
 		owned_car_ids = ["basic"]
 	if owned_gearbox_ids.is_empty():
@@ -225,6 +260,7 @@ func load_game() -> bool:
 		equipped_gearbox_id = DEFAULT_GEARBOX_ID
 	if not owns_gearbox(equipped_gearbox_id):
 		owned_gearbox_ids.append(equipped_gearbox_id)
+	_ensure_stock_fitment()
 	refresh_car_stats()
 	return true
 
@@ -248,9 +284,36 @@ func owns_gearbox(gearbox_id: String) -> bool:
 	return owned_gearbox_ids.has(gearbox_id)
 
 
+func owns_engine(engine_id: String) -> bool:
+	return owned_engine_ids.has(engine_id)
+
+
+func owns_wheel(wheel_id: String) -> bool:
+	return owned_wheel_ids.has(wheel_id)
+
+
+func get_equipped_engine() -> Dictionary:
+	var engine: Dictionary = listing_by_id(ENGINES, equipped_engine_id)
+	if engine.is_empty():
+		return get_stock_engine()
+	return engine
+
+
+func get_equipped_wheel() -> Dictionary:
+	var wheel: Dictionary = listing_by_id(WHEELS, equipped_wheel_id)
+	if wheel.is_empty():
+		return {}
+	return wheel
+
+
 func get_equipped_gearbox() -> Dictionary:
+	var stock := get_stock_transmission()
+	if equipped_gearbox_id == str(stock.get("id", "")) and not stock.is_empty():
+		return stock
 	var box: Dictionary = listing_by_id(GEARBOXES, equipped_gearbox_id)
 	if box.is_empty():
+		if not stock.is_empty():
+			return stock
 		box = listing_by_id(GEARBOXES, DEFAULT_GEARBOX_ID)
 	return box
 
@@ -276,6 +339,12 @@ func refresh_car_stats() -> void:
 	car_name = str(car.get("name", car_name))
 	vmax_kmh = float(car.get("vmax", vmax_kmh))
 	engine_power_hp = float(car.get("hp", engine_power_hp))
+	if current_car_id == "basic":
+		var engine := get_equipped_engine()
+		if not engine.is_empty():
+			car_name = str(car_spec.get("name", car_name))
+			vmax_kmh = float(engine.get("vmax", vmax_kmh))
+			engine_power_hp = float(engine.get("hp", engine_power_hp))
 	for part_id in owned_part_ids:
 		var part: Dictionary = listing_by_id(PARTS, part_id)
 		if part.is_empty():
@@ -314,6 +383,35 @@ func buy_or_equip_gearbox(gearbox_id: String) -> String:
 	money -= price
 	owned_gearbox_ids.append(gearbox_id)
 	equipped_gearbox_id = gearbox_id
+	return ""
+
+
+func buy_or_equip_engine(engine_id: String) -> String:
+	return _buy_or_equip(ENGINES, owned_engine_ids, engine_id, "engine")
+
+
+func buy_or_equip_wheel(wheel_id: String) -> String:
+	return _buy_or_equip(WHEELS, owned_wheel_ids, wheel_id, "wheel")
+
+
+func _buy_or_equip(list: Array[Dictionary], owned: Array[String], part_id: String, label: String) -> String:
+	var part: Dictionary = listing_by_id(list, part_id)
+	if part.is_empty():
+		return "That %s is not in the register." % label
+	var equipped := equipped_engine_id if label == "engine" else equipped_wheel_id
+	if equipped == part_id:
+		return "Already on the car."
+	if not owned.has(part_id):
+		var price := int(part.get("price", 0))
+		if money < price:
+			return "Not enough cash."
+		money -= price
+		owned.append(part_id)
+	if label == "engine":
+		equipped_engine_id = part_id
+	else:
+		equipped_wheel_id = part_id
+	refresh_car_stats()
 	return ""
 
 

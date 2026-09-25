@@ -27,9 +27,15 @@ func _refresh() -> void:
 func _rebuild_parts() -> void:
 	for child in _parts_list.get_children():
 		child.queue_free()
+	_parts_list.add_child(_heading("ENGINES"))
+	for engine in GameState.ENGINES:
+		_parts_list.add_child(_make_engine_card(engine))
 	_parts_list.add_child(_heading("TRANSMISSIONS"))
 	for box in GameState.GEARBOXES:
 		_parts_list.add_child(_make_gearbox_card(box))
+	_parts_list.add_child(_heading("WHEELS"))
+	for wheel in GameState.WHEELS:
+		_parts_list.add_child(_make_wheel_card(wheel))
 	_parts_list.add_child(_heading("ENGINE & CHASSIS"))
 	for part in GameState.PARTS:
 		_parts_list.add_child(_make_part_card(part))
@@ -143,6 +149,47 @@ func _body(text: String) -> Label:
 	label.text = text
 	label.modulate = Color(0.25, 0.22, 0.18, 1)
 	return label
+
+
+func _make_engine_card(engine: Dictionary) -> Control:
+	return _make_swap_card(engine, GameState.equipped_engine_id, GameState.owns_engine(str(engine.get("id", ""))), "%.0f hp · %.0f km/h" % [float(engine.get("hp", 0.0)), float(engine.get("vmax", 0.0))], _on_buy_engine)
+
+
+func _make_wheel_card(wheel: Dictionary) -> Control:
+	return _make_swap_card(wheel, GameState.equipped_wheel_id, GameState.owns_wheel(str(wheel.get("id", ""))), "Grip %d" % int(wheel.get("grip", 3)), _on_buy_wheel)
+
+
+func _make_swap_card(part: Dictionary, equipped_id: String, owned: bool, detail: String, handler: Callable) -> Control:
+	var part_id := str(part.get("id", ""))
+	var price := int(part.get("price", 0))
+	var card := _card()
+	card.add_child(_heading(str(part.get("name", "Part"))))
+	card.add_child(_body(detail))
+	var btn := _ink_button()
+	if part_id == equipped_id:
+		btn.text = "On the car"
+		btn.disabled = true
+	elif owned:
+		btn.text = "Bolt it on"
+		btn.pressed.connect(handler.bind(part_id))
+	else:
+		btn.text = "Buy — $%d" % price
+		btn.disabled = GameState.money < price
+		btn.pressed.connect(handler.bind(part_id))
+	card.add_child(btn)
+	return card
+
+
+func _on_buy_engine(engine_id: String) -> void:
+	var err := GameState.buy_or_equip_engine(engine_id)
+	_status.text = "Engine is in." if err.is_empty() else err
+	_refresh()
+
+
+func _on_buy_wheel(wheel_id: String) -> void:
+	var err := GameState.buy_or_equip_wheel(wheel_id)
+	_status.text = "Wheels are on." if err.is_empty() else err
+	_refresh()
 
 
 func _on_buy_gearbox(gearbox_id: String) -> void:

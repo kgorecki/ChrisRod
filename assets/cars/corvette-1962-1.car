@@ -1,0 +1,46 @@
+{
+  "id": "corvette-1962-1",
+  "name": "Corvette 1962",
+  "model": {
+    "path": "res://assets/cars/c-1962.glb",
+    "position": [0.0, 0.55, 0.0],
+    "height": 5.0
+  },
+  "register": "res://assets/parts/parts.register",
+  "wheels": {
+    "mounts": [
+      {
+        "node": "WheelFrontLeft",
+        "position": [-0.829, 0.889, 1.833],
+        "rotation": [0, 180, 90]
+      },
+      {
+        "node": "WheelFrontRight",
+        "position": [0.774, 0.889, 1.833],
+        "rotation": [0, 180, -90]
+      },
+      {
+        "node": "WheelBackLeft",
+        "position": [-0.812, 0.889, -1.056],
+        "rotation": [0, 180, 90]
+      },
+      {
+        "node": "WheelBackRight",
+        "position": [0.757, 0.889, -1.056],
+        "rotation": [0, 180, -90]
+      }
+    ]
+  },
+  "parts": {
+    "engine": "v8-283",
+    "transmission": "gb_auto3",
+    "wheels": "wheel-c1"
+  },
+  "chassis": {
+    "mass": 1360,
+    "wheelbase": 2.59,
+    "cg_height": 0.48,
+    "front_axle_fraction": 0.46,
+    "max_steer_deg": 30
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "engines": [
+    {
+      "id": "v8-265",
+      "concern": "GM",
+      "name": "265 V8",
+      "price": 900,
+      "hp": 230,
+      "vmax": 200
+    },
+    {
+      "id": "v8-283",
+      "concern": "GM",
+      "name": "283 V8",
+      "price": 0,
+      "hp": 280,
+      "vmax": 220
+    },
+    {
+      "id": "v8-327",
+      "concern": "GM",
+      "name": "327 V8",
+      "price": 2400,
+      "hp": 350,
+      "vmax": 250
+    }
+  ],
+  "transmissions": [
+    {
+      "id": "gb_auto3",
+      "name": "Automatic 3-speed",
+      "price": 0,
+      "automatic": true,
+      "shift_time": 0.42,
+      "top_speed": 0.82,
+      "ratios": [2.52, 1.52, 1.0]
+    },
+    {
+      "id": "gb_man3",
+      "name": "3-speed manual",
+      "price": 420,
+      "automatic": false,
+      "shift_time": 0.2,
+      "top_speed": 0.88,
+      "ratios": [2.98, 1.58, 1.0]
+    },
+    {
+      "id": "gb_man4",
+      "name": "4-speed manual",
+      "price": 740,
+      "automatic": false,
+      "shift_time": 0.16,
+      "top_speed": 0.95,
+      "ratios": [3.15, 1.92, 1.34, 1.0]
+    },
+    {
+      "id": "gb_man5",
+      "name": "5-speed manual",
+      "price": 1150,
+      "automatic": false,
+      "shift_time": 0.12,
+      "top_speed": 1.0,
+      "ratios": [3.28, 2.08, 1.48, 1.14, 0.89]
+    },
+    {
+      "id": "gb_race5",
+      "name": "5-speed racing",
+      "price": 1850,
+      "automatic": false,
+      "shift_time": 0.07,
+      "top_speed": 1.08,
+      "ratios": [3.55, 2.22, 1.58, 1.18, 0.76]
+    }
+  ],
+  "wheels": [
+    {
+      "id": "wheels-premium",
+      "name": "Premium wheels",
+      "price": 300,
+      "path": "res://assets/parts/wheel-premium.glb",
+      "scale": 1.35,
+      "height": 0.5,
+      "grip": 5
+    },
+    {
+      "id": "wheel-c1",
+      "name": "C1 steel wheel",
+      "price": 200,
+      "path": "res://assets/parts/wheel-c1.glb",
+      "scale": 1.35,
+      "height": 0.5,
+      "grip": 3
+    },
+    {
+      "id": "wheel-std",
+      "name": "standard steel wheel",
+      "price": 120,
+      "path": "res://assets/parts/wheel-standard.stl",
+      "scale": 1.35,
+      "height": 0.5,
+      "grip": 1
+    }
+  ],
+  "parts": [
+    {"id": "carb", "name": "Four-barrel carburetor", "price": 450, "hp": 25, "vmax": 4},
+    {"id": "intake", "name": "Performance intake", "price": 320, "hp": 15, "vmax": 2},
+    {"id": "exhaust", "name": "Headers & exhaust", "price": 380, "hp": 18, "vmax": 5},
+    {"id": "cam", "name": "Racing camshaft", "price": 520, "hp": 30, "vmax": 6},
+    {"id": "tires", "name": "Stickier slicks", "price": 280, "hp": 0, "vmax": 8}
+  ]
+}

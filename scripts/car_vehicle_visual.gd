@@ -9,10 +9,22 @@ extends Node3D
 
 #@export var body_node_path: NodePath = NodePath("body")
 
+const _CarFile := preload("res://scripts/car_file.gd")
+
 var _waiting_for_stl: bool = false
 
+func _enter_tree() -> void:
+	_apply_car_file()
+
+
 func _ready() -> void:
+	apply_equipped_wheels()
 	_apply_wheel_scale()
+	var loaded_body := get_node_or_null("CarBody") as Node
+	if loaded_body != null:
+		_hide_baked_wheels(loaded_body)
+		if loaded_body.has_signal(&"stl_loaded"):
+			loaded_body.connect(&"stl_loaded", Callable(self, "_on_body_hide_wheels"))
 	var car_body := get_node_or_null("body") as MeshInstance3D
 	if car_body != null and body_paint != null:
 		# CarBody `_ready` runs before this node, so the STL may already be loaded.
@@ -22,9 +34,108 @@ func _ready() -> void:
 			_waiting_for_stl = true
 			car_body.connect(&"stl_loaded", Callable(self, "_on_car_body_stl_loaded").bind(car_body))
 
+func _on_body_hide_wheels(_mesh: Variant) -> void:
+	var loaded_body := get_node_or_null("CarBody") as Node
+	if loaded_body != null:
+		_hide_baked_wheels(loaded_body)
+
+
+func _hide_baked_wheels(node: Node) -> void:
+	for child in node.get_children():
+		if child is MeshInstance3D and _is_baked_wheel(child as MeshInstance3D):
+			(child as MeshInstance3D).visible = false
+		_hide_baked_wheels(child)
+
+
+func _is_baked_wheel(mesh_instance: MeshInstance3D) -> bool:
+	var label := String(mesh_instance.name).to_lower()
+	if label.contains("wheel") or label.contains("tire"):
+		return true
+	if mesh_instance.mesh == null:
+		return false
+	for i in mesh_instance.mesh.get_surface_count():
+		var mat := mesh_instance.get_surface_override_material(i)
+		if mat == null:
+			mat = mesh_instance.mesh.surface_get_material(i)
+		if mat == null:
+			continue
+		var mat_name := String(mat.resource_name).to_lower()
+		if mat_name.contains("wheel") or mat_name.contains("tire"):
+			return true
+	return false
+
+
 func _on_car_body_stl_loaded(_mesh: Mesh, car_body: MeshInstance3D) -> void:
 	_waiting_for_stl = false
 	_apply_body_paint(car_body)
+
+
+func _apply_car_file() -> void:
+	var spec: Dictionary = _CarFile.load_path(GameState.PLAYER_CAR_FILE)
+	var errors: Variant = spec.get("errors", [])
+	if typeof(errors) == TYPE_ARRAY and not (errors as Array).is_empty():
+		return
+	var model: Variant = spec.get("model", {})
+	if typeof(model) == TYPE_DICTIONARY:
+		var model_dict: Dictionary = model
+		_apply_mount(get_node_or_null("CarBody") as Node3D, str(model_dict.get("path", "")), model_dict, float(model_dict.get("height", 5.0)))
+	var wheels: Variant = spec.get("wheels", {})
+	if typeof(wheels) != TYPE_DICTIONARY:
+		return
+	var wheel_dict: Dictionary = wheels
+	wheel_scale = float(wheel_dict.get("scale", wheel_scale))
+	var mounts: Variant = wheel_dict.get("mounts", [])
+	if typeof(mounts) != TYPE_ARRAY:
+		return
+	var wheel_path := str(wheel_dict.get("path", ""))
+	var wheel_height := float(wheel_dict.get("height", 0.5))
+	for item in mounts:
+		if typeof(item) != TYPE_DICTIONARY:
+			continue
+		var mount: Dictionary = item
+		var wheel := get_node_or_null(str(mount.get("node", ""))) as Node3D
+		_apply_mount(wheel, wheel_path, mount, wheel_height)
+
+
+func _apply_mount(node: Node3D, model_path: String, mount: Dictionary, height: float) -> void:
+	if node == null or node.get("stl_path") == null:
+		return
+	if not model_path.is_empty():
+		node.set("stl_path", model_path)
+	var pos: Variant = mount.get("position", null)
+	if pos is Vector3:
+		node.position = pos
+	var rot: Variant = mount.get("rotation", null)
+	if rot is Vector3:
+		node.set("stl_rotation_degrees", rot)
+	node.set("auto_scale_to_height", height)
+
+
+func apply_equipped_wheels() -> void:
+	var wheel: Dictionary = GameState.get_equipped_wheel()
+	if wheel.is_empty():
+		return
+	var path := str(wheel.get("path", ""))
+	if path.is_empty():
+		return
+	wheel_scale = float(wheel.get("scale", wheel_scale))
+	var height := float(wheel.get("height", 0.5))
+	var wheel_names := ["WheelFrontLeft", "WheelFrontRight", "WheelBackLeft", "WheelBackRight"]
+	for wname in wheel_names:
+		var mount := get_node_or_null(wname) as Node3D
+		if mount == null or mount.get("stl_path") == null:
+			continue
+		var changed := str(mount.get("stl_path")) != path
+		mount.visible = true
+		mount.set("stl_path", path)
+		mount.set("auto_scale_to_height", height)
+		if changed and mount.has_method(&"load_model"):
+			for child in mount.get_children():
+				mount.remove_child(child)
+				child.free()
+			if mount is MeshInstance3D:
+				(mount as MeshInstance3D).mesh = null
+			mount.call(&"load_model")
 
 
 func _apply_wheel_scale() -> void:
@@ -128,23 +239,31 @@ func align_wheels_to_floor(floor_mesh_instance: MeshInstance3D) -> void:
 
 	var wheel_names := ["WheelFrontLeft", "WheelFrontRight", "WheelBackLeft", "WheelBackRight"]
 	for wname in wheel_names:
-		var wheel := get_node_or_null(wname) as MeshInstance3D
-		if wheel == null or wheel.mesh == null:
+		var wheel := get_node_or_null(wname) as Node3D
+		if wheel == null:
 			continue
-
-		var waabb := wheel.get_aabb()
-		var wmin := waabb.position
-		var wmax := waabb.position + waabb.size
-		var bottom_y := INF
-		for wx in [wmin.x, wmax.x]:
-			for wy in [wmin.y, wmax.y]:
-				for wz in [wmin.z, wmax.z]:
-					var corner := Vector3(wx, wy, wz)
-					var world := wheel.global_transform * corner
-					bottom_y = minf(bottom_y, world.y)
-
+		var bottom_y := _mesh_bottom_y(wheel)
+		if bottom_y == INF:
+			continue
 		var delta := floor_top_y - bottom_y
 		if absf(delta) > 0.0001:
 			var gp := wheel.global_position
 			gp.y += delta
 			wheel.global_position = gp
+
+
+func _mesh_bottom_y(node: Node3D) -> float:
+	var bottom_y := INF
+	if node is MeshInstance3D and (node as MeshInstance3D).mesh != null:
+		var aabb := (node as MeshInstance3D).get_aabb()
+		var wmin := aabb.position
+		var wmax := wmin + aabb.size
+		for wx in [wmin.x, wmax.x]:
+			for wy in [wmin.y, wmax.y]:
+				for wz in [wmin.z, wmax.z]:
+					var world := node.global_transform * Vector3(wx, wy, wz)
+					bottom_y = minf(bottom_y, world.y)
+	for child in node.get_children():
+		if child is Node3D:
+			bottom_y = minf(bottom_y, _mesh_bottom_y(child as Node3D))
+	return bottom_y
