@@ -3,7 +3,7 @@
   "name": "Corvette 1962",
   "model": {
     "path": "res://assets/cars/c-1962.glb",
-    "position": [0.0, 0.55, 0.0],
+    "position": [0.0, 0.0, 0.0],
     "height": 5.0
   },
   "register": "res://assets/parts/parts.register",

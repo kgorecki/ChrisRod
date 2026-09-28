@@ -10,6 +10,7 @@ extends Node3D
 #@export var body_node_path: NodePath = NodePath("body")
 
 const _CarFile := preload("res://scripts/car_file.gd")
+const _PaintShader := preload("res://shaders/car_paint_mask.gdshader")
 
 var _waiting_for_stl: bool = false
 
@@ -25,6 +26,7 @@ func _ready() -> void:
 		_hide_baked_wheels(loaded_body)
 		if loaded_body.has_signal(&"stl_loaded"):
 			loaded_body.connect(&"stl_loaded", Callable(self, "_on_body_hide_wheels"))
+	set_car_body_color(GameState.car_color)
 	var car_body := get_node_or_null("body") as MeshInstance3D
 	if car_body != null and body_paint != null:
 		# CarBody `_ready` runs before this node, so the STL may already be loaded.
@@ -38,6 +40,7 @@ func _on_body_hide_wheels(_mesh: Variant) -> void:
 	var loaded_body := get_node_or_null("CarBody") as Node
 	if loaded_body != null:
 		_hide_baked_wheels(loaded_body)
+	set_car_body_color(GameState.car_color)
 
 
 func _hide_baked_wheels(node: Node) -> void:
@@ -71,18 +74,29 @@ func _on_car_body_stl_loaded(_mesh: Mesh, car_body: MeshInstance3D) -> void:
 
 
 func _apply_car_file() -> void:
-	var spec: Dictionary = _CarFile.load_path(GameState.PLAYER_CAR_FILE)
+	var spec: Dictionary = GameState.car_spec
+	if spec.is_empty() or not spec.get("errors", []).is_empty():
+		spec = _CarFile.load_path(GameState.current_car_file_path())
 	var errors: Variant = spec.get("errors", [])
 	if typeof(errors) == TYPE_ARRAY and not (errors as Array).is_empty():
 		return
+	var wheels: Variant = spec.get("wheels", {})
+	var overlay := true
+	if typeof(wheels) == TYPE_DICTIONARY:
+		overlay = bool((wheels as Dictionary).get("overlay", true))
 	var model: Variant = spec.get("model", {})
 	if typeof(model) == TYPE_DICTIONARY:
 		var model_dict: Dictionary = model
-		_apply_mount(get_node_or_null("CarBody") as Node3D, str(model_dict.get("path", "")), model_dict, float(model_dict.get("height", 5.0)))
-	var wheels: Variant = spec.get("wheels", {})
+		var body := get_node_or_null("CarBody") as Node3D
+		_apply_mount(body, str(model_dict.get("path", "")), model_dict, float(model_dict.get("height", 5.0)))
+		if body != null:
+			body.set("snap_to_ground", not overlay)
 	if typeof(wheels) != TYPE_DICTIONARY:
 		return
 	var wheel_dict: Dictionary = wheels
+	_set_overlay_wheels_visible(overlay)
+	if not overlay:
+		return
 	wheel_scale = float(wheel_dict.get("scale", wheel_scale))
 	var mounts: Variant = wheel_dict.get("mounts", [])
 	if typeof(mounts) != TYPE_ARRAY:
@@ -95,6 +109,13 @@ func _apply_car_file() -> void:
 		var mount: Dictionary = item
 		var wheel := get_node_or_null(str(mount.get("node", ""))) as Node3D
 		_apply_mount(wheel, wheel_path, mount, wheel_height)
+
+
+func _set_overlay_wheels_visible(show: bool) -> void:
+	for wname in ["WheelFrontLeft", "WheelFrontRight", "WheelBackLeft", "WheelBackRight"]:
+		var wheel := get_node_or_null(wname) as Node3D
+		if wheel != null:
+			wheel.visible = show
 
 
 func _apply_mount(node: Node3D, model_path: String, mount: Dictionary, height: float) -> void:
@@ -112,7 +133,17 @@ func _apply_mount(node: Node3D, model_path: String, mount: Dictionary, height: f
 
 
 func apply_equipped_wheels() -> void:
+	if not _overlay_wheels_enabled():
+		_set_overlay_wheels_visible(false)
+		return
 	apply_wheel_set(GameState.get_equipped_wheel())
+
+
+func _overlay_wheels_enabled() -> bool:
+	var wheels: Variant = GameState.car_spec.get("wheels", {})
+	if typeof(wheels) != TYPE_DICTIONARY:
+		return true
+	return bool((wheels as Dictionary).get("overlay", true))
 
 
 func apply_wheel_set(wheel: Dictionary) -> void:
@@ -196,39 +227,74 @@ func _apply_body_paint(car_body: MeshInstance3D) -> void:
 		#car_body.connect(&"stl_loaded", Callable(self, "_on_car_body_stl_loaded").bind(car_body))
 
 func set_car_body_color(new_color: Color) -> void:
-	print_debug("[DEBUG CAR COLOR] selected=", new_color)
-	#var body = get_node_or_null(body_node_path)
-	var body = find_child("body", true, false)
-	if not body:
-		print_debug("body not found: body")
+	var color := new_color
+	color.a = 1.0
+	var named_body := find_child("body", true, false)
+	if named_body is MeshInstance3D and (named_body as MeshInstance3D).mesh != null:
+		_paint_solid_mesh(named_body as MeshInstance3D, color)
 		return
+	var car_body := get_node_or_null("CarBody")
+	if car_body != null:
+		_paint_masked_meshes(car_body, color)
 
-	# iterujemy po wszystkich powierzchniach karoserii
-	var surface_count = body.mesh.get_surface_count()
+
+func _paint_solid_mesh(mesh_instance: MeshInstance3D, color: Color) -> void:
+	var surface_count := mesh_instance.mesh.get_surface_count()
 	for i in range(surface_count):
-		var mat = body.get_surface_override_material(i)
+		var mat: Material = mesh_instance.get_surface_override_material(i)
+		if mat == null:
+			mat = mesh_instance.mesh.surface_get_material(i)
+		if mat == null:
+			mat = StandardMaterial3D.new()
+		var mat_copy := mat.duplicate()
+		mesh_instance.set_surface_override_material(i, mat_copy)
+		if mat_copy is StandardMaterial3D:
+			(mat_copy as StandardMaterial3D).albedo_texture = null
+			(mat_copy as StandardMaterial3D).albedo_color = color
+		elif mat_copy is ShaderMaterial:
+			if (mat_copy as ShaderMaterial).shader != null:
+				(mat_copy as ShaderMaterial).set_shader_parameter("paint_color", color)
+				(mat_copy as ShaderMaterial).set_shader_parameter("albedo_color", color)
 
-		# jeśli nie ma materiału override, pobierz domyślny
-		if not mat:
-			mat = body.mesh.surface_get_material(i)
 
-		if mat:
-			# sklonuj materiał, żeby nie zmieniać oryginału
-			var mat_copy = mat.duplicate()
-			body.set_surface_override_material(i, mat_copy)
+func _paint_masked_meshes(node: Node, color: Color) -> void:
+	if node is MeshInstance3D:
+		var mesh_instance := node as MeshInstance3D
+		if mesh_instance.mesh != null and mesh_instance.visible and not _is_baked_wheel(mesh_instance):
+			_paint_masked_mesh(mesh_instance, color)
+	for child in node.get_children():
+		_paint_masked_meshes(child, color)
 
-			# zmiana koloru
-			if mat_copy is StandardMaterial3D:
-				mat_copy.albedo_texture = null
-				mat_copy.albedo_color = new_color
-			elif mat_copy is ShaderMaterial:
-				# jeśli shader ma uniform 'albedo_color'
-				if mat_copy.has_parameter("albedo_color"):
-					mat_copy.set_shader_parameter("albedo_color", new_color)
-			else:
-				push_warning("Nieobsługiwany typ materiału: %s" % mat_copy)
 
-## Align wheel bottoms to the top of a horizontal floor mesh (same logic as former garage-only code).
+func _paint_masked_mesh(mesh_instance: MeshInstance3D, color: Color) -> void:
+	for i in range(mesh_instance.mesh.get_surface_count()):
+		var mat: Material = mesh_instance.get_surface_override_material(i)
+		if mat == null:
+			mat = mesh_instance.mesh.surface_get_material(i)
+		var tex: Texture2D = null
+		if mat is ShaderMaterial:
+			var existing := mat as ShaderMaterial
+			var tagged: Variant = existing.get_shader_parameter("albedo_tex")
+			if tagged is Texture2D:
+				tex = tagged
+			existing.set_shader_parameter("paint_color", color)
+			if tex != null:
+				continue
+		elif mat is StandardMaterial3D:
+			tex = (mat as StandardMaterial3D).albedo_texture
+		if tex == null:
+			if mat is StandardMaterial3D:
+				var solid := (mat as StandardMaterial3D).duplicate() as StandardMaterial3D
+				solid.albedo_color = color
+				mesh_instance.set_surface_override_material(i, solid)
+			continue
+		var shader_mat := ShaderMaterial.new()
+		shader_mat.shader = _PaintShader
+		shader_mat.set_shader_parameter("albedo_tex", tex)
+		shader_mat.set_shader_parameter("paint_color", color)
+		mesh_instance.set_surface_override_material(i, shader_mat)
+
+## Sit wheel bottoms and the car body on the top of a horizontal floor mesh.
 func align_wheels_to_floor(floor_mesh_instance: MeshInstance3D) -> void:
 	if floor_mesh_instance == null or floor_mesh_instance.mesh == null:
 		return
@@ -246,17 +312,21 @@ func align_wheels_to_floor(floor_mesh_instance: MeshInstance3D) -> void:
 
 	var wheel_names := ["WheelFrontLeft", "WheelFrontRight", "WheelBackLeft", "WheelBackRight"]
 	for wname in wheel_names:
-		var wheel := get_node_or_null(wname) as Node3D
-		if wheel == null:
-			continue
-		var bottom_y := _mesh_bottom_y(wheel)
-		if bottom_y == INF:
-			continue
-		var delta := floor_top_y - bottom_y
-		if absf(delta) > 0.0001:
-			var gp := wheel.global_position
-			gp.y += delta
-			wheel.global_position = gp
+		_snap_node_bottom_to_y(get_node_or_null(wname) as Node3D, floor_top_y)
+	_snap_node_bottom_to_y(get_node_or_null("CarBody") as Node3D, floor_top_y)
+
+
+func _snap_node_bottom_to_y(node: Node3D, floor_top_y: float) -> void:
+	if node == null:
+		return
+	var bottom_y := _mesh_bottom_y(node)
+	if bottom_y == INF:
+		return
+	var delta := floor_top_y - bottom_y
+	if absf(delta) > 0.0001:
+		var gp := node.global_position
+		gp.y += delta
+		node.global_position = gp
 
 
 func _mesh_bottom_y(node: Node3D) -> float:

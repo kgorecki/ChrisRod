@@ -73,7 +73,8 @@ var ENGINES: Array[Dictionary] = []
 var WHEELS: Array[Dictionary] = []
 
 const USED_CARS: Array[Dictionary] = [
-	{"id": "basic", "name": "Corvette 1962", "price": 0, "vmax": 220.0, "hp": 280.0, "color": Color(0.15, 0.45, 0.85, 1.0)},
+	{"id": "basic", "name": "Corvette 1962", "price": 0, "vmax": 220.0, "hp": 280.0, "color": Color(0.15, 0.45, 0.85, 1.0), "car_file": PLAYER_CAR_FILE},
+	{"id": "vette-1956", "name": "Vette 1956", "price": 1200, "vmax": 195.0, "hp": 210.0, "color": Color(0.78, 0.14, 0.14, 1.0), "car_file": "res://assets/cars/vette-1956.car"},
 	{"id": "coupe", "name": "Street Coupe", "price": 1800, "vmax": 235.0, "hp": 300.0, "color": Color(0.72, 0.12, 0.12, 1.0)},
 	{"id": "roadster", "name": "Open Roadster", "price": 2400, "vmax": 245.0, "hp": 320.0, "color": Color(0.92, 0.78, 0.18, 1.0)},
 	{"id": "hotrod", "name": "Shop Hot Rod", "price": 3600, "vmax": 260.0, "hp": 360.0, "color": Color(0.12, 0.12, 0.12, 1.0)},
@@ -116,8 +117,16 @@ func _dict_list(value: Variant) -> Array[Dictionary]:
 	return rows
 
 
+func current_car_file_path() -> String:
+	var car: Dictionary = listing_by_id(USED_CARS, current_car_id)
+	var path := str(car.get("car_file", ""))
+	if path.is_empty() or not FileAccess.file_exists(path):
+		return PLAYER_CAR_FILE
+	return path
+
+
 func load_player_car() -> void:
-	car_spec = _CarFile.load_path(PLAYER_CAR_FILE)
+	car_spec = _CarFile.load_path(current_car_file_path())
 	var errors: Variant = car_spec.get("errors", [])
 	if typeof(errors) == TYPE_ARRAY:
 		for err in errors:
@@ -176,7 +185,7 @@ func new_game() -> void:
 	owned_wheel_ids.clear()
 	equipped_engine_id = ""
 	equipped_wheel_id = ""
-	_ensure_stock_fitment()
+	load_player_car()
 	refresh_car_stats()
 
 
@@ -267,7 +276,7 @@ func load_game() -> bool:
 		equipped_gearbox_id = DEFAULT_GEARBOX_ID
 	if not owns_gearbox(equipped_gearbox_id):
 		owned_gearbox_ids.append(equipped_gearbox_id)
-	_ensure_stock_fitment()
+	load_player_car()
 	refresh_car_stats()
 	return true
 
@@ -443,6 +452,7 @@ func buy_or_select_car(car_id: String) -> String:
 		return "Already in the garage."
 	if owns_car(car_id):
 		current_car_id = car_id
+		load_player_car()
 		refresh_car_stats()
 		return ""
 	var price := int(car.get("price", 0))
@@ -452,6 +462,7 @@ func buy_or_select_car(car_id: String) -> String:
 	owned_car_ids.append(car_id)
 	current_car_id = car_id
 	car_color = car.get("color", car_color)
+	load_player_car()
 	refresh_car_stats()
 	return ""
 

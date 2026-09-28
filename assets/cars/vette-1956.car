@@ -1,0 +1,47 @@
+{
+  "id": "vette-1956",
+  "name": "Vette 1956",
+  "model": {
+    "path": "res://assets/cars/sr1-c56.glb",
+    "position": [0.0, 0.0, 0.0],
+    "height": 1.5
+  },
+  "register": "res://assets/parts/parts.register",
+  "wheels": {
+    "overlay": false,
+    "mounts": [
+      {
+        "node": "WheelFrontLeft",
+        "position": [-0.78, 0.36, 1.25],
+        "rotation": [0, 180, 90]
+      },
+      {
+        "node": "WheelFrontRight",
+        "position": [0.78, 0.36, 1.25],
+        "rotation": [0, 180, -90]
+      },
+      {
+        "node": "WheelBackLeft",
+        "position": [-0.78, 0.36, -1.25],
+        "rotation": [0, 180, 90]
+      },
+      {
+        "node": "WheelBackRight",
+        "position": [0.78, 0.36, -1.25],
+        "rotation": [0, 180, -90]
+      }
+    ]
+  },
+  "parts": {
+    "engine": "v8-283",
+    "transmission": "gb_auto3",
+    "wheels": "wheel-c1"
+  },
+  "chassis": {
+    "mass": 1290,
+    "wheelbase": 2.59,
+    "cg_height": 0.48,
+    "front_axle_fraction": 0.46,
+    "max_steer_deg": 30
+  }
+}

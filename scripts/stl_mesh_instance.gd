@@ -12,6 +12,9 @@ extends MeshInstance3D
 @export var apply_rotation: bool = true
 @export var stl_rotation_degrees: Vector3 = Vector3(0.0, 0.0, 0.0)
 @export var car_material: StandardMaterial3D
+## When true, shift the GLB so its lowest mesh point sits on this node's origin.
+## Used for cars with baked-in wheels. Overlay-wheel cars keep their authored offset.
+@export var snap_to_ground: bool = false
 
 signal stl_loaded(mesh_or_node)
 
@@ -150,37 +153,94 @@ func load_glb_scene() -> void:
 		return
 
 	add_child(inst)
+	if inst is Node3D:
+		(inst as Node3D).force_update_transform()
 
-	var bbox := get_aabb_recursive(inst)
+	# Visual AABB includes node scale/rotation. Legacy AABB is mesh-local and is
+	# what the 1962 car file's height=5 still expects (Sketchfab Y is length).
+	var visual := _subtree_aabb(inst as Node3D, (inst as Node3D).transform)
+	var legacy := get_aabb_recursive(inst)
+	var height := maxf(visual.size.y, legacy.size.y)
 
-	# Auto scale
-	if auto_scale_to_height > 0:
-		var height = bbox.size.y
-		if height > 0.0001:
-			var scale_factor = auto_scale_to_height / height * scale_multiplier
-			inst.scale = inst.scale * scale_factor
-			bbox = get_aabb_recursive(inst)
+	if auto_scale_to_height > 0.0 and height > 0.0001:
+		var scale_factor := auto_scale_to_height / height * scale_multiplier
+		inst.scale = inst.scale * scale_factor
 
-	# Rotation
 	if apply_rotation:
 		inst.rotate_x(deg_to_rad(stl_rotation_degrees.x))
 		inst.rotate_y(deg_to_rad(stl_rotation_degrees.y))
 		inst.rotate_z(deg_to_rad(stl_rotation_degrees.z))
-		bbox = get_aabb_recursive(inst)
 
-	# Wheel mounts are centered on the axle. Shifting them onto the ground
-	# slides the left and right wheels in opposite directions.
-	if not str(name).begins_with("Wheel"):
-		var min_y = get_min_y_global(inst) * 50
-		print_debug("[DEBUG GLB][stl_mesh_loader] min_y=", min_y)
-		inst.translate(Vector3(0, -min_y, 0))
-
-	#if print_debug:
-		#print("[GLB] Loaded:", stl_path, " scale:", inst.scale, " ground_offset:", offset_y)
+	if snap_to_ground and inst is Node3D:
+		_snap_instance_to_ground(inst as Node3D)
+	if print_debug:
+		print("[GLB] Loaded:", stl_path, " visual=", visual.size, " scale_h=", height)
 
 	emit_signal("stl_loaded", inst)
 
 # ---------------------- Helpers ----------------------
+
+func _subtree_aabb(node: Node3D, xf: Transform3D) -> AABB:
+	var aabb := AABB()
+	var started := false
+	if node is MeshInstance3D:
+		var mi := node as MeshInstance3D
+		if mi.mesh != null:
+			aabb = _aabb_from_corners(xf, mi.mesh.get_aabb())
+			started = true
+	for child in node.get_children():
+		if not child is Node3D:
+			continue
+		var child_aabb := _subtree_aabb(child as Node3D, xf * (child as Node3D).transform)
+		if child_aabb.size == Vector3.ZERO:
+			continue
+		if not started:
+			aabb = child_aabb
+			started = true
+		else:
+			aabb = aabb.merge(child_aabb)
+	return aabb
+
+
+func _aabb_from_corners(xf: Transform3D, local: AABB) -> AABB:
+	var out := AABB(xf * local.get_endpoint(0), Vector3.ZERO)
+	for i in range(1, 8):
+		out = out.expand(xf * local.get_endpoint(i))
+	return out
+
+
+func _world_mesh_aabb(node: Node) -> AABB:
+	var aabb := AABB()
+	var started := false
+	if node is MeshInstance3D:
+		var mi := node as MeshInstance3D
+		if mi.mesh != null:
+			aabb = _aabb_from_corners(mi.global_transform, mi.mesh.get_aabb())
+			started = true
+	for child in node.get_children():
+		var child_aabb := _world_mesh_aabb(child)
+		if child_aabb.size == Vector3.ZERO:
+			continue
+		if not started:
+			aabb = child_aabb
+			started = true
+		else:
+			aabb = aabb.merge(child_aabb)
+	return aabb
+
+
+func _snap_instance_to_ground(inst: Node3D) -> void:
+	inst.force_update_transform()
+	var world := _world_mesh_aabb(inst)
+	if world.size.y <= 0.0001:
+		return
+	var parent := inst.get_parent() as Node3D
+	if parent == null:
+		inst.position.y -= world.position.y
+		return
+	var local := _aabb_from_corners(parent.global_transform.affine_inverse(), world)
+	inst.position.y -= local.position.y
+
 
 func get_min_y_global(node: Node3D) -> float:
 	var min_y: float = INF

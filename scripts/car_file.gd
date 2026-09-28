@@ -97,6 +97,7 @@ static func _parse_wheels(root: Dictionary, result: Dictionary) -> void:
 		"path": "",
 		"scale": 1.0,
 		"height": 0.5,
+		"overlay": bool(block.get("overlay", true)),
 		"mounts": parsed,
 	}
 
