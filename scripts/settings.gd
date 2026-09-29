@@ -10,12 +10,14 @@ func _ready() -> void:
 	%FullscreenCheck.button_pressed = fs
 	%MasterSlider.value = db_to_linear(AudioServer.get_bus_volume_db(0))
 	%MusicCheck.set_pressed_no_signal(GameState.music_enabled)
+	%ArcadeCheck.set_pressed_no_signal(GameState.arcade_drive)
 	GameState.update_music()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_nav.setup([
 		%FullscreenCheck,
 		%MasterSlider,
 		%MusicCheck,
+		%ArcadeCheck,
 		$Margin/VBox/BackButton,
 	])
 
@@ -42,3 +44,7 @@ func _on_master_volume_changed(value: float) -> void:
 
 func _on_music_toggled(pressed: bool) -> void:
 	GameState.set_music_enabled(pressed)
+
+
+func _on_arcade_toggled(pressed: bool) -> void:
+	GameState.set_arcade_drive(pressed)

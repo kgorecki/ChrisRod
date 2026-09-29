@@ -33,6 +33,15 @@ var _race_started: bool = false
 @onready var _ground: StaticBody3D = $Ground
 @onready var _finish: Area3D = $FinishLine
 
+@onready var _pause_menu: Control = $RaceUI/PauseMenu
+@onready var _pause_main: Control = $RaceUI/PauseMenu/Panel
+@onready var _pause_settings: Control = $RaceUI/PauseMenu/SettingsPanel
+@onready var _pause_confirm: Control = $RaceUI/PauseMenu/ConfirmPanel
+@onready var _pause_fullscreen: CheckBox = $RaceUI/PauseMenu/SettingsPanel/Margin/VBox/FullscreenCheck
+@onready var _pause_master: HSlider = $RaceUI/PauseMenu/SettingsPanel/Margin/VBox/MasterSlider
+@onready var _pause_music: CheckBox = $RaceUI/PauseMenu/SettingsPanel/Margin/VBox/MusicCheck
+@onready var _pause_arcade: CheckBox = $RaceUI/PauseMenu/SettingsPanel/Margin/VBox/ArcadeCheck
+
 var _race_over: bool = false
 var _opponent_finished: bool = false
 var _is_road: bool = false
@@ -49,11 +58,18 @@ const _ON_GREEN := Color(0.2, 0.95, 0.28, 1)
 
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	_player.process_mode = Node.PROCESS_MODE_PAUSABLE
+	_opponent.process_mode = Node.PROCESS_MODE_PAUSABLE
+	$RaceUI.process_mode = Node.PROCESS_MODE_PAUSABLE
+	_pause_menu.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	GameState.current_scene_path = GameState.SCENE_RACE
 	GameState.update_music()
 	_is_road = GameState.selected_race_type == GameState.RACE_ROAD
 	_setup_race_layout()
 	_result.visible = false
+	_reset_pause_pages()
+	_pause_menu.visible = false
 	var i: int = clampi(GameState.selected_opponent_id, 0, GameState.OPPONENTS.size() - 1)
 	var opp: Dictionary = GameState.OPPONENTS[i]
 	_hud_opp.text = "Opponent: %s" % str(opp.get("name", "Rival"))
@@ -168,7 +184,7 @@ func _debug_mesh_instances_recursive(node: Node, label: String) -> void:
 
 
 func _process(delta: float) -> void:
-	if _race_over:
+	if get_tree().paused or _race_over:
 		return
 	if _player.has_method(&"get_gear_label"):
 		_hud_gear.text = "Gear: %s" % _player.get_gear_label()
@@ -274,6 +290,7 @@ func _finish_player() -> void:
 
 
 func _show_engine_blown() -> void:
+	_resume_race()
 	_race_over = true
 	_result.visible = true
 	if _mobile != null:
@@ -285,6 +302,7 @@ func _show_engine_blown() -> void:
 
 
 func _show_result(player_won: bool) -> void:
+	_resume_race()
 	_result.visible = true
 	if _mobile != null:
 		_mobile.visible = false
@@ -303,12 +321,151 @@ func _show_result(player_won: bool) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not _result.visible:
-		return
-	if _nav.handle_event(self, event):
+	if event.is_action_pressed(&"ui_cancel"):
+		_handle_escape()
 		var viewport := get_viewport()
 		if viewport != null:
 			viewport.set_input_as_handled()
+		return
+	if _result.visible or _pause_menu.visible:
+		if _nav.handle_event(self, event):
+			var viewport := get_viewport()
+			if viewport != null:
+				viewport.set_input_as_handled()
+
+
+func _handle_escape() -> void:
+	if _result.visible:
+		return
+	if _pause_confirm.visible:
+		_hide_pause_confirm()
+		return
+	if _pause_settings.visible:
+		_close_pause_settings()
+		return
+	if _pause_menu.visible:
+		_resume_race()
+		return
+	_open_pause_menu()
+
+
+func _open_pause_menu() -> void:
+	_reset_pause_pages()
+	_pause_menu.visible = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	get_tree().paused = true
+	_sync_pause_nav()
+
+
+func _resume_race() -> void:
+	get_tree().paused = false
+	_reset_pause_pages()
+	_pause_menu.visible = false
+	_nav.clear()
+
+
+func _reset_pause_pages() -> void:
+	_pause_main.visible = true
+	_pause_settings.visible = false
+	_pause_confirm.visible = false
+
+
+func _sync_pause_nav() -> void:
+	if _pause_confirm.visible:
+		_nav.setup([
+			$RaceUI/PauseMenu/ConfirmPanel/Margin/VBox/CancelBtn,
+			$RaceUI/PauseMenu/ConfirmPanel/Margin/VBox/LeaveBtn,
+		])
+	elif _pause_settings.visible:
+		_nav.setup([
+			_pause_fullscreen,
+			_pause_master,
+			_pause_music,
+			_pause_arcade,
+			$RaceUI/PauseMenu/SettingsPanel/Margin/VBox/BackBtn,
+		])
+	elif _pause_menu.visible:
+		_nav.setup([
+			$RaceUI/PauseMenu/Panel/Margin/VBox/ResumeBtn,
+			$RaceUI/PauseMenu/Panel/Margin/VBox/SettingsBtn,
+			$RaceUI/PauseMenu/Panel/Margin/VBox/ExitBtn,
+		])
+	else:
+		_nav.clear()
+
+
+func _on_pause_resume_pressed() -> void:
+	_resume_race()
+
+
+func _on_pause_settings_pressed() -> void:
+	_pause_main.visible = false
+	_pause_confirm.visible = false
+	_pause_settings.visible = true
+	_refresh_pause_settings()
+	_sync_pause_nav()
+
+
+func _on_pause_settings_back_pressed() -> void:
+	_close_pause_settings()
+
+
+func _close_pause_settings() -> void:
+	GameState.save_settings()
+	_pause_settings.visible = false
+	_pause_main.visible = true
+	_sync_pause_nav()
+
+
+func _refresh_pause_settings() -> void:
+	_pause_fullscreen.set_pressed_no_signal(DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN)
+	_pause_master.set_value_no_signal(db_to_linear(AudioServer.get_bus_volume_db(0)))
+	_pause_music.set_pressed_no_signal(GameState.music_enabled)
+	_pause_arcade.set_pressed_no_signal(GameState.arcade_drive)
+
+
+func _on_pause_fullscreen_toggled(pressed: bool) -> void:
+	DisplayServer.window_set_mode(
+		DisplayServer.WINDOW_MODE_FULLSCREEN if pressed else DisplayServer.WINDOW_MODE_WINDOWED
+	)
+
+
+func _on_pause_master_volume_changed(value: float) -> void:
+	AudioServer.set_bus_volume_db(0, linear_to_db(value))
+
+
+func _on_pause_music_toggled(pressed: bool) -> void:
+	GameState.set_music_enabled(pressed)
+
+
+func _on_pause_arcade_toggled(pressed: bool) -> void:
+	GameState.set_arcade_drive(pressed)
+
+
+func _on_pause_exit_pressed() -> void:
+	_pause_main.visible = false
+	_pause_settings.visible = false
+	_pause_confirm.visible = true
+	_sync_pause_nav()
+
+
+func _on_pause_confirm_cancel_pressed() -> void:
+	_hide_pause_confirm()
+
+
+func _hide_pause_confirm() -> void:
+	_pause_confirm.visible = false
+	_pause_main.visible = true
+	_sync_pause_nav()
+
+
+func _on_pause_confirm_leave_pressed() -> void:
+	_leave_race()
+
+
+func _leave_race() -> void:
+	get_tree().paused = false
+	get_tree().change_scene_to_file(GameState.SCENE_GARAGE)
 
 
 func _wire_result_menu() -> void:
@@ -319,8 +476,10 @@ func _wire_result_menu() -> void:
 
 
 func _on_back_garage_pressed() -> void:
+	get_tree().paused = false
 	get_tree().change_scene_to_file(GameState.SCENE_GARAGE)
 
 
 func _on_main_menu_pressed() -> void:
+	get_tree().paused = false
 	get_tree().change_scene_to_file(GameState.SCENE_MAIN_MENU)

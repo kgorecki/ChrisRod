@@ -5,6 +5,8 @@ extends Node3D
 @export_file("*.trk") var track_path: String = "res://assets/tracks/track1.trk"
 
 const ROAD_HALF_W := 20.0
+## Depth of the barrier strip past the driveable edge.
+const OBSTACLE_BAND := 0.7
 const BAKE_STEP := 2.0
 const FILLET_MIN_ANGLE := 0.06 ## ~3.5 degrees; smaller turns stay as a sharp join
 const FILLET_LEN_FRACTION := 0.4
@@ -104,6 +106,25 @@ func closest_sample(world: Vector3) -> Dictionary:
 	var right := Vector3(cos(yaw), 0.0, -sin(yaw))
 	var lateral := (world - _pts[best_i]).dot(right)
 	return _make_sample(_pts[best_i], yaw, _dists[best_i], lateral, best_i)
+
+
+## Where a car at `world` must go when it sits in a barrier band just outside
+## the road edge. Returns `world` unchanged when it is clear.
+func obstacle_escape(world: Vector3) -> Vector3:
+	var sample := closest_sample(world)
+	var lat := float(sample.get("lateral", 0.0))
+	var left_ext := float(sample.get("left_ext", 0.0))
+	var right_ext := float(sample.get("right_ext", 0.0))
+	var center: Vector3 = sample.get("position", world)
+	var right_v: Vector3 = sample.get("right", Vector3.RIGHT)
+	var safe := world
+	if bool(sample.get("obstacle_left", false)) and lat < -left_ext and lat > -(left_ext + OBSTACLE_BAND):
+		safe = center - right_v * maxf(left_ext - 0.5, 0.4)
+	elif bool(sample.get("obstacle_right", false)) and lat > right_ext and lat < right_ext + OBSTACLE_BAND:
+		safe = center + right_v * maxf(right_ext - 0.5, 0.4)
+	else:
+		return world
+	return Vector3(safe.x, world.y, safe.z)
 
 
 func finish_basis() -> Transform3D:

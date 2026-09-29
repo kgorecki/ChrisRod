@@ -8,6 +8,12 @@ const _MenuNav := preload("res://scripts/menu_nav.gd")
 @onready var _camera: Camera3D = $CameraPivot/Pitch/Camera3D
 
 @onready var _clock_menu: Control = $GarageUI/ClockMenu
+@onready var _clock_main: Control = $GarageUI/ClockMenu/Panel
+@onready var _clock_settings: Control = $GarageUI/ClockMenu/SettingsPanel
+@onready var _clock_fullscreen: CheckBox = $GarageUI/ClockMenu/SettingsPanel/Margin/VBox/FullscreenCheck
+@onready var _clock_master: HSlider = $GarageUI/ClockMenu/SettingsPanel/Margin/VBox/MasterSlider
+@onready var _clock_music: CheckBox = $GarageUI/ClockMenu/SettingsPanel/Margin/VBox/MusicCheck
+@onready var _clock_arcade: CheckBox = $GarageUI/ClockMenu/SettingsPanel/Margin/VBox/ArcadeCheck
 @onready var _stats_panel: Control = $GarageUI/StatsPanel
 @onready var _spray_menu: Control = $GarageUI/ColorPickerMenu
 @onready var _spray_color_picker: ColorPicker = $GarageUI/ColorPickerMenu/Panel/Margin/VBox/ColorPicker
@@ -70,6 +76,7 @@ const _T_PAUSE := 0.28
 func _ready() -> void:
 	GameState.current_scene_path = GameState.SCENE_GARAGE
 	_stats_label = _stats_panel.get_node("Panel/Margin/VBox/StatsText") as Label
+	_reset_clock_menu_page()
 	_clock_menu.visible = false
 	_stats_panel.visible = false
 	_spray_menu.visible = false
@@ -186,8 +193,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		_handle_camera_only(event)
 		return
 	if _clock_menu.visible and event.is_action_pressed(&"ui_cancel"):
-		_clock_menu.visible = false
-		_sync_menu_nav()
+		if _clock_settings.visible:
+			_close_clock_settings()
+		else:
+			_clock_menu.visible = false
+			_sync_menu_nav()
 		get_viewport().set_input_as_handled()
 		return
 	if _stats_panel.visible and event.is_action_pressed(&"ui_cancel"):
@@ -340,6 +350,8 @@ func _try_garage_shortcut(event: InputEvent) -> bool:
 			_handle_interact(&"newspaper")
 		KEY_M:
 			GameState.toggle_music()
+			if _clock_settings.visible:
+				_clock_music.set_pressed_no_signal(GameState.music_enabled)
 		KEY_P:
 			if _spray_menu.visible:
 				_spray_menu.visible = false
@@ -354,7 +366,10 @@ func _try_garage_shortcut(event: InputEvent) -> bool:
 				_bring_calendar_forward()
 		KEY_Q:
 			if _clock_menu.visible:
-				_clock_menu.visible = false
+				if _clock_settings.visible:
+					_close_clock_settings()
+				else:
+					_clock_menu.visible = false
 			else:
 				_hide_garage_overlays()
 				_clock_menu.visible = true
@@ -380,6 +395,7 @@ func _gui_has_text_focus() -> bool:
 
 
 func _hide_garage_overlays() -> void:
+	_reset_clock_menu_page()
 	_clock_menu.visible = false
 	_stats_panel.visible = false
 	_spray_menu.visible = false
@@ -388,11 +404,25 @@ func _hide_garage_overlays() -> void:
 	_sync_menu_nav()
 
 
+func _reset_clock_menu_page() -> void:
+	_clock_main.visible = true
+	_clock_settings.visible = false
+
+
 func _sync_menu_nav() -> void:
-	if _clock_menu.visible:
+	if _clock_menu.visible and _clock_settings.visible:
+		_nav.setup([
+			_clock_fullscreen,
+			_clock_master,
+			_clock_music,
+			_clock_arcade,
+			$GarageUI/ClockMenu/SettingsPanel/Margin/VBox/BackBtn,
+		])
+	elif _clock_menu.visible:
 		_nav.setup([
 			$GarageUI/ClockMenu/Panel/Margin/VBox/SaveBtn,
 			$GarageUI/ClockMenu/Panel/Margin/VBox/LoadBtn,
+			$GarageUI/ClockMenu/Panel/Margin/VBox/SettingsBtn,
 			$GarageUI/ClockMenu/Panel/Margin/VBox/QuitBtn,
 			$GarageUI/ClockMenu/Panel/Margin/VBox/CloseBtn,
 		])
@@ -464,6 +494,7 @@ func _handle_interact(kind: Variant) -> void:
 		return
 	match kind:
 		&"clock":
+			_reset_clock_menu_page()
 			_clock_menu.visible = true
 			_sync_menu_nav()
 		&"chart":
@@ -474,6 +505,8 @@ func _handle_interact(kind: Variant) -> void:
 			get_tree().change_scene_to_file(GameState.SCENE_NEWSPAPER)
 		&"radio":
 			GameState.toggle_music()
+			if _clock_settings.visible:
+				_clock_music.set_pressed_no_signal(GameState.music_enabled)
 		&"doors":
 			get_tree().change_scene_to_file(GameState.SCENE_OPPONENT_SELECT)
 		&"spray":
@@ -798,8 +831,52 @@ func _on_clock_quit_menu_pressed() -> void:
 
 
 func _on_clock_close_pressed() -> void:
+	_reset_clock_menu_page()
 	_clock_menu.visible = false
 	_sync_menu_nav()
+
+
+func _on_clock_settings_pressed() -> void:
+	_clock_main.visible = false
+	_clock_settings.visible = true
+	_refresh_clock_settings()
+	_sync_menu_nav()
+
+
+func _on_clock_settings_back_pressed() -> void:
+	_close_clock_settings()
+
+
+func _close_clock_settings() -> void:
+	GameState.save_settings()
+	_clock_settings.visible = false
+	_clock_main.visible = true
+	_sync_menu_nav()
+
+
+func _refresh_clock_settings() -> void:
+	_clock_fullscreen.set_pressed_no_signal(DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN)
+	_clock_master.set_value_no_signal(db_to_linear(AudioServer.get_bus_volume_db(0)))
+	_clock_music.set_pressed_no_signal(GameState.music_enabled)
+	_clock_arcade.set_pressed_no_signal(GameState.arcade_drive)
+
+
+func _on_clock_fullscreen_toggled(pressed: bool) -> void:
+	DisplayServer.window_set_mode(
+		DisplayServer.WINDOW_MODE_FULLSCREEN if pressed else DisplayServer.WINDOW_MODE_WINDOWED
+	)
+
+
+func _on_clock_master_volume_changed(value: float) -> void:
+	AudioServer.set_bus_volume_db(0, linear_to_db(value))
+
+
+func _on_clock_music_toggled(pressed: bool) -> void:
+	GameState.set_music_enabled(pressed)
+
+
+func _on_clock_arcade_toggled(pressed: bool) -> void:
+	GameState.set_arcade_drive(pressed)
 
 
 func _start_wheel_change(wheel_id: String) -> void:

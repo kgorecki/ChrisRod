@@ -5,10 +5,10 @@ var forward_speed: float = 0.0
 ## Car heading in radians. 0 means pointing along world +Z.
 var heading_yaw: float = 0.0
 
-const ACCELERATION := 24.0
-const BRAKING := 40.0
-const COAST_FACTOR := 0.985
-const REF_GEAR_RATIO := 2.80
+const _VehicleDynamics := preload("res://scripts/vehicle_dynamics.gd")
+const _SkidMarks := preload("res://scripts/skid_marks.gd")
+const _ArcadeDrive := preload("res://scripts/arcade_drive.gd")
+
 const RPM_IDLE_MIN := 500.0
 const RPM_IDLE := 600.0 ## C1 idle sits between 500 and 700.
 const RPM_SHIFT_START := 5500.0
@@ -17,57 +17,41 @@ const RPM_CRITICAL := 6700.0
 const RPM_METER_MAX := 7000.0
 const OVERREV_HOLD_S := 0.55
 
-const WHEELBASE_M := 2.59
-const MAX_STEER_RAD := 0.52 ## ~30° lock.
-const STEER_RESPONSE := 3.2 ## Steering-rack speed, rad/s.
-const MASS_KG := 1360.0
-const CG_HEIGHT_M := 0.48
-const GRAVITY := 9.81
-const MU_DRY := 1.02
-const MU_OFFROAD := 0.48
-## Front-engine C1: nose is heavier, so the CG sits just ahead of the wheelbase midpoint.
-const FRONT_AXLE_FRACTION := 0.46
-const CORNERING_FRONT := 52000.0 ## N/rad, both front tires.
-const CORNERING_REAR := 64000.0
-const GRIP_FADE_SPEED := 2.0 ## Tires need to be rolling before they bite.
-
-## Half the drag-strip width (m). Past this counts as off-road.
-const TRACK_X_LIMIT := 18.0
-const OFFROAD_ACCEL_SCALE := 0.42
-const OFFROAD_DRAG := 0.993
-const OFFROAD_MAX_SPEED_SCALE := 0.5
-
 const CAM_FAR := 0
 const CAM_CLOSE := 1
 const CAM_COCKPIT := 2
 const CAM_BUMPER := 3
 
+@export var debug_dynamics: bool = false
+
 @onready var _cam: Camera3D = $RaceCamera
 @onready var _engine_sound: Node = $EngineSound
 @onready var _visual: Node3D = $CarPivot
 var _cam_mode: int = CAM_FAR
-var _steer_angle: float = 0.0
-var _lateral_speed: float = 0.0 ## m/s toward car +X.
-var _yaw_rate: float = 0.0
+var _dynamics: _VehicleDynamics = _VehicleDynamics.new()
+var _arcade: _ArcadeDrive = _ArcadeDrive.new()
+var _skids: _SkidMarks
 var _car_center := Vector3(0.0, 0.0, 1.9)
-var _wheelbase: float = WHEELBASE_M
-var _mass_kg: float = MASS_KG
-var _cg_height: float = CG_HEIGHT_M
-var _front_axle_fraction: float = FRONT_AXLE_FRACTION
-var _max_steer_rad: float = MAX_STEER_RAD
-var _wheel_grip: float = 3.0
+var _debug_view: MeshInstance3D
+var _debug_labels: Array[Label3D] = []
 var _touch: Node = null
 var _gearbox: Dictionary = {}
 var _gear: int = 0
 var _shift_timer: float = 0.0
 var _overrev_time: float = 0.0
 var _engine_blown: bool = false
-var _off_road: bool = false
+var _arcade_active: bool = false
 
 func _ready() -> void:
 	motion_mode = MOTION_MODE_FLOATING
 	_apply_car_spec()
 	_cache_axles()
+	_layout_wheels()
+	_dynamics.yaw = rotation.y
+	heading_yaw = rotation.y
+	_skids = _SkidMarks.new()
+	_skids.name = "SkidMarks"
+	add_child(_skids)
 	_apply_camera_mode()
 	_gearbox = GameState.get_equipped_gearbox()
 	_gear = 0
@@ -163,89 +147,41 @@ func _cache_axles() -> void:
 
 
 func _apply_car_spec() -> void:
-	var chassis: Variant = GameState.car_spec.get("chassis", {})
-	if typeof(chassis) != TYPE_DICTIONARY or (chassis as Dictionary).is_empty():
-		return
-	var spec: Dictionary = chassis
-	_mass_kg = float(spec.get("mass", _mass_kg))
-	_wheelbase = float(spec.get("wheelbase", _wheelbase))
-	_cg_height = float(spec.get("cg_height", _cg_height))
-	_front_axle_fraction = float(spec.get("front_axle_fraction", _front_axle_fraction))
-	_max_steer_rad = deg_to_rad(float(spec.get("max_steer_deg", rad_to_deg(_max_steer_rad))))
+	var chassis: Dictionary = {}
+	var spec: Variant = GameState.car_spec.get("chassis", {})
+	if typeof(spec) == TYPE_DICTIONARY:
+		chassis = spec
 	var wheel: Dictionary = GameState.get_equipped_wheel()
-	_wheel_grip = clampf(float(wheel.get("grip", 3.0)), 1.0, 5.0)
+	var grip_rating := clampf(float(wheel.get("grip", 3.0)), 1.0, 5.0)
+	_dynamics.apply_setup(chassis, grip_rating)
+	_arcade.apply_spec(chassis, grip_rating)
 
 
-func _target_steer(steer: float) -> float:
-	return clampf(steer, -1.0, 1.0) * _max_steer_rad * _grip_steer_scale()
+func _layout_wheels() -> void:
+	var points: Array[Vector3] = []
+	if _visual != null:
+		for wname in ["WheelFrontLeft", "WheelFrontRight", "WheelBackLeft", "WheelBackRight"]:
+			var wheel := _visual.get_node_or_null(wname) as Node3D
+			if wheel == null:
+				points.clear()
+				break
+			points.append(to_local(wheel.global_position))
+	if points.size() == 4:
+		_dynamics.set_wheel_positions(points)
+	else:
+		_dynamics.layout_about(Vector3(_car_center.x, 0.0, _car_center.z))
 
 
-## Grip 3 is the stock tire. Each step is a small accel change and a larger steering change.
-func _grip_accel_scale() -> float:
-	return 1.0 + (_wheel_grip - 3.0) * 0.04
+func _sync_motion_state() -> void:
+	forward_speed = _dynamics.longitudinal_speed()
+	heading_yaw = _dynamics.yaw
 
 
-func _grip_steer_scale() -> float:
-	return 1.0 + (_wheel_grip - 3.0) * 0.12
-
-
-## Front tires push the nose; rear tires resist the slide. Grip saturates, so a fast car washes out instead of pivoting.
-func _step_chassis(delta: float, longitudinal_accel: float) -> void:
-	var axle_front := _wheelbase * _front_axle_fraction
-	var axle_rear := _wheelbase - axle_front
-	var mu := MU_OFFROAD if _off_road else MU_DRY
-	var weight := _mass_kg * GRAVITY
-	var transfer := _mass_kg * longitudinal_accel * _cg_height / _wheelbase
-	var fz_front := maxf(weight * axle_rear / _wheelbase - transfer, weight * 0.12)
-	var fz_rear := maxf(weight * axle_front / _wheelbase + transfer, weight * 0.12)
-	var long_front := 0.0
-	var long_rear := _mass_kg * longitudinal_accel
-	if longitudinal_accel < 0.0:
-		long_front = _mass_kg * longitudinal_accel * 0.65
-		long_rear = _mass_kg * longitudinal_accel * 0.35
-
-	var speed := maxf(forward_speed, 0.35)
-	var front_slip := atan2(_lateral_speed + _yaw_rate * axle_front, speed) - _steer_angle
-	var rear_slip := atan2(_lateral_speed - _yaw_rate * axle_rear, speed)
-	var steer_grip := _grip_steer_scale()
-	var front_force := _tire_force(front_slip, CORNERING_FRONT * steer_grip, fz_front, long_front, mu)
-	var rear_force := _tire_force(rear_slip, CORNERING_REAR * steer_grip, fz_rear, long_rear, mu)
-	var rolling := clampf(forward_speed / GRIP_FADE_SPEED, 0.0, 1.0)
-	front_force *= rolling
-	rear_force *= rolling
-
-	var steer_cos := cos(_steer_angle)
-	var steer_sin := sin(_steer_angle)
-	var lateral_force := front_force * steer_cos + rear_force
-	var yaw_moment := front_force * steer_cos * axle_front - rear_force * axle_rear
-	var inertia := _mass_kg * axle_front * axle_rear
-	_lateral_speed += (lateral_force / _mass_kg - _yaw_rate * forward_speed) * delta
-	_yaw_rate += (yaw_moment / inertia) * delta
-	forward_speed += (-front_force * steer_sin / _mass_kg) * delta
-	if forward_speed < GRIP_FADE_SPEED:
-		var settle := (1.0 - forward_speed / GRIP_FADE_SPEED) * 8.0 * delta
-		_lateral_speed = lerpf(_lateral_speed, 0.0, clampf(settle, 0.0, 1.0))
-		_yaw_rate = lerpf(_yaw_rate, 0.0, clampf(settle, 0.0, 1.0))
-
-
-func _tire_force(slip: float, stiffness: float, normal: float, longitudinal: float, mu: float) -> float:
-	var limit := mu * normal
-	var long_used := clampf(absf(longitudinal) / maxf(limit, 1.0), 0.0, 1.0)
-	var lat_limit := limit * sqrt(maxf(0.0, 1.0 - long_used * long_used))
-	return clampf(-stiffness * slip, -lat_limit, lat_limit)
-
-
-func _stop_slide() -> void:
-	_lateral_speed = 0.0
-	_yaw_rate = 0.0
-
-
-## Yaw about the car mesh. The body origin sits back by the camera, so rotating it in place orbits the car around the view.
-func _apply_heading() -> void:
-	var center_world := global_transform * _car_center
-	rotation.y = heading_yaw
-	var center_now := global_transform * _car_center
-	global_position += center_world - center_now
+func _hold_still() -> void:
+	_sync_motion_state()
+	_dynamics.pose_body(self, false)
+	move_and_slide()
+	_skids.end_strips()
 
 
 func _steer_input() -> float:
@@ -275,18 +211,26 @@ func _brake_down() -> bool:
 
 func _physics_process(delta: float) -> void:
 	_poll_touch_shifts()
+	if GameState.arcade_drive:
+		_physics_arcade(delta)
+	else:
+		_physics_simulation(delta)
+
+
+func _physics_simulation(delta: float) -> void:
+	if _arcade_active:
+		_dynamics.reset_all_motion()
+		_dynamics.yaw = heading_yaw
+		_dynamics.cg_velocity = Vector3(sin(heading_yaw), 0.0, cos(heading_yaw)) * maxf(forward_speed, 0.0)
+		_arcade_active = false
 	var race := get_parent()
 	if race and race.has_method(&"is_race_started") and not race.is_race_started():
-		forward_speed = 0.0
-		_stop_slide()
-		velocity = Vector3.ZERO
-		move_and_slide()
-		_steer_angle = 0.0
-		_apply_heading()
+		_dynamics.reset_all_motion()
+		_hold_still()
 		_update_engine_sound(false)
+		_update_debug_draw()
 		return
 
-	var max_mps: float = GameState.get_effective_vmax_kmh() / 3.6
 	var throttle := _throttle_down()
 	var brake := _brake_down()
 	var steer := _steer_input()
@@ -297,59 +241,96 @@ func _physics_process(delta: float) -> void:
 	elif _is_automatic():
 		_auto_shift(throttle, brake)
 
-	_update_surface()
-	var blocked := _resolve_track_obstacles()
-	if blocked:
-		forward_speed = 0.0
-		_stop_slide()
+	var track := _race_track()
+	if _escape_obstacle(track):
+		_dynamics.reset_motion()
+		_dynamics.update_steering(delta, 0.0)
+		_hold_still()
+		_update_overrev(delta)
+		_update_engine_sound(throttle)
+		_update_debug_draw()
+		return
+
+	var drive := 0.0
+	var brake_input := 0.0
+	if throttle and _shift_timer <= 0.0:
+		drive = _requested_drive_force()
+	elif brake:
+		brake_input = 1.0
+	_dynamics.sample_surfaces(track, global_transform)
+	_dynamics.step(delta, steer, drive, brake_input)
+	_sync_motion_state()
+	_dynamics.pose_body(self, true)
+	move_and_slide()
+	if _slide_hit_obstacle():
+		_dynamics.reset_motion()
+		_sync_motion_state()
 		velocity = Vector3.ZERO
+		_skids.end_strips()
+	else:
+		_skids.record(_dynamics.wheels(), global_transform)
+
+	_update_overrev(delta)
+	_update_engine_sound(throttle)
+	_update_debug_draw()
+
+
+func _physics_arcade(delta: float) -> void:
+	if not _arcade_active:
+		_arcade.forward_speed = maxf(forward_speed, 0.0)
+		_arcade.heading_yaw = heading_yaw
+		_arcade_active = true
+	var race := get_parent()
+	if race and race.has_method(&"is_race_started") and not race.is_race_started():
+		_arcade.hold(self, delta, _car_center)
 		move_and_slide()
-		_steer_angle = move_toward(_steer_angle, 0.0, STEER_RESPONSE * delta)
-		_apply_heading()
+		forward_speed = 0.0
+		heading_yaw = _arcade.heading_yaw
+		_skids.end_strips()
+		_update_engine_sound(false)
+		return
+
+	var throttle := _throttle_down()
+	var brake := _brake_down()
+	var steer := _steer_input()
+	if _shift_timer > 0.0:
+		_shift_timer = maxf(0.0, _shift_timer - delta)
+	if _engine_blown:
+		throttle = false
+	elif _is_automatic():
+		_auto_shift(throttle, brake)
+
+	if _escape_obstacle(_race_track()):
+		_arcade.hold(self, delta, _car_center)
+		move_and_slide()
+		forward_speed = 0.0
+		heading_yaw = _arcade.heading_yaw
+		_skids.end_strips()
 		_update_overrev(delta)
 		_update_engine_sound(throttle)
 		return
-	var speed_before := forward_speed
-	var accel_scale := OFFROAD_ACCEL_SCALE if _off_road else 1.0
-	if throttle and _shift_timer <= 0.0:
-		forward_speed += _gear_acceleration() * accel_scale * _grip_accel_scale() * delta
-	elif brake:
-		forward_speed -= BRAKING * delta
-	else:
-		forward_speed *= pow(COAST_FACTOR, delta * 60.0)
-	if _engine_blown:
-		forward_speed *= pow(0.96, delta * 60.0)
-	if _off_road:
-		forward_speed *= pow(OFFROAD_DRAG, delta * 60.0)
-		forward_speed = minf(forward_speed, max_mps * OFFROAD_MAX_SPEED_SCALE)
 
-	forward_speed = clampf(forward_speed, 0.0, max_mps)
-	var longitudinal_accel := (forward_speed - speed_before) / maxf(delta, 0.0001)
-	var steer_target := _target_steer(steer)
-	if absf(steer) < 0.01:
-		steer_target = 0.0
-	_steer_angle = move_toward(_steer_angle, steer_target, STEER_RESPONSE * delta)
-	_step_chassis(delta, longitudinal_accel)
-	if absf(_steer_angle) < 0.02:
-		var straighten := clampf(12.0 * delta, 0.0, 1.0)
-		_yaw_rate = lerpf(_yaw_rate, 0.0, straighten)
-		_lateral_speed = lerpf(_lateral_speed, 0.0, straighten)
-	var yaw_cap := absf(forward_speed * tan(_steer_angle) / _wheelbase) * 1.2 * _grip_steer_scale() + 0.08
-	_yaw_rate = clampf(_yaw_rate, -yaw_cap, yaw_cap)
-	_lateral_speed = clampf(_lateral_speed, -forward_speed * 0.45, forward_speed * 0.45)
-	forward_speed = clampf(forward_speed, 0.0, max_mps)
-	heading_yaw += _yaw_rate * delta
-
-	var forward_dir := Vector3(sin(heading_yaw), 0.0, cos(heading_yaw))
-	var right_dir := Vector3(cos(heading_yaw), 0.0, -sin(heading_yaw))
-	velocity = forward_dir * forward_speed + right_dir * _lateral_speed
+	var ratios := _ratios()
+	var ratio := float(ratios[clampi(_gear, 0, ratios.size() - 1)])
+	_arcade.step(
+		self,
+		delta,
+		steer,
+		throttle,
+		brake,
+		_shift_timer > 0.0,
+		_engine_blown,
+		_arcade.gear_acceleration(ratio, _gear_top_mps(_gear), forward_speed, GameState.engine_power_hp),
+		GameState.get_effective_vmax_kmh() / 3.6,
+		_car_center
+	)
 	move_and_slide()
 	if _slide_hit_obstacle():
-		forward_speed = 0.0
-		_stop_slide()
+		_arcade.reset()
 		velocity = Vector3.ZERO
-
-	_apply_heading()
+	forward_speed = _arcade.forward_speed
+	heading_yaw = _arcade.heading_yaw
+	_skids.end_strips()
 	_update_overrev(delta)
 	_update_engine_sound(throttle)
 
@@ -378,21 +359,12 @@ func _gear_top_mps(gear_index: int) -> float:
 	return vmax_mps * (top_ratio / ratio)
 
 
-func _gear_acceleration() -> float:
+## Gear and horsepower scale the configured propulsion force. The tires still
+## have to be able to push that hard.
+func _requested_drive_force() -> float:
 	var ratios := _ratios()
 	var ratio := float(ratios[clampi(_gear, 0, ratios.size() - 1)])
-	var gear_top := _gear_top_mps(_gear)
-	var headroom := 1.0
-	if gear_top > 0.05:
-		var progress := forward_speed / gear_top
-		if progress >= 1.12:
-			return 0.0
-		if progress >= 1.0:
-			headroom = 0.14
-		else:
-			headroom = 1.0 - progress * progress
-	var hp_scale: float = GameState.engine_power_hp / 280.0
-	return ACCELERATION * (ratio / REF_GEAR_RATIO) * hp_scale * headroom
+	return _dynamics.drive_force(ratio, _gear_top_mps(_gear), forward_speed, GameState.engine_power_hp)
 
 
 func _request_shift(direction: int) -> void:
@@ -449,46 +421,21 @@ func _poll_touch_shifts() -> void:
 		_request_shift(-1)
 
 
-func _update_surface() -> void:
+func _race_track() -> Node:
 	var race := get_parent()
-	if race and race.has_method(&"get_race_track"):
-		var track: Node = race.get_race_track()
-		if track != null and track.has_method(&"closest_sample"):
-			var sample: Dictionary = track.closest_sample(global_position)
-			var lat := float(sample.get("lateral", 0.0))
-			var left_ext := float(sample.get("left_ext", sample.get("half_width", track.get_half_width())))
-			var right_ext := float(sample.get("right_ext", sample.get("half_width", track.get_half_width())))
-			_off_road = lat < -(left_ext - 1.0) or lat > (right_ext - 1.0)
-			return
-	_off_road = absf(global_position.x) > TRACK_X_LIMIT
+	if race != null and race.has_method(&"get_race_track"):
+		return race.get_race_track()
+	return null
 
 
-func _resolve_track_obstacles() -> bool:
-	var race := get_parent()
-	if race == null or not race.has_method(&"get_race_track"):
+func _escape_obstacle(track: Node) -> bool:
+	if track == null or not track.has_method(&"obstacle_escape"):
 		return false
-	var track: Node = race.get_race_track()
-	if track == null or not track.has_method(&"closest_sample"):
+	var safe: Vector3 = track.obstacle_escape(global_position)
+	if safe.is_equal_approx(global_position):
 		return false
-	var sample: Dictionary = track.closest_sample(global_position)
-	var lat := float(sample.get("lateral", 0.0))
-	var left_ext := float(sample.get("left_ext", 0.0))
-	var right_ext := float(sample.get("right_ext", 0.0))
-	var center: Vector3 = sample.get("position", global_position)
-	var right_v: Vector3 = sample.get("right", Vector3.RIGHT)
-	const EDGE := 0.7
-	var hit := false
-	var safe := global_position
-	if bool(sample.get("obstacle_left", false)) and lat < -left_ext and lat > -(left_ext + EDGE):
-		hit = true
-		safe = center - right_v * maxf(left_ext - 0.5, 0.4)
-	elif bool(sample.get("obstacle_right", false)) and lat > right_ext and lat < right_ext + EDGE:
-		hit = true
-		safe = center + right_v * maxf(right_ext - 0.5, 0.4)
-	if hit:
-		global_position.x = safe.x
-		global_position.z = safe.z
-	return hit
+	global_position = safe
+	return true
 
 
 func _slide_hit_obstacle() -> bool:
@@ -498,3 +445,105 @@ func _slide_hit_obstacle() -> bool:
 		if collider is Node and (collider as Node).has_meta(&"track_obstacle"):
 			return true
 	return false
+
+
+func _update_debug_draw() -> void:
+	if not debug_dynamics:
+		if _debug_view != null:
+			_debug_view.visible = false
+		for label in _debug_labels:
+			label.visible = false
+		return
+	_ensure_debug_view()
+	_debug_view.visible = true
+	var mesh := ImmediateMesh.new()
+	mesh.surface_begin(Mesh.PRIMITIVE_LINES, _debug_view.material_override)
+	var cg := _dynamics.cg_local
+	_debug_cross(mesh, cg, 0.35, Color(1.0, 0.85, 0.2))
+	var v_body := _dynamics.body_velocity()
+	var v_scale: float = _dynamics.config.debug_velocity_scale
+	_debug_line(mesh, cg, cg + Vector3(v_body.x, 0.0, v_body.z) * v_scale, Color(0.3, 0.85, 1.0))
+	var accel_scale := 0.12
+	var long_a := _dynamics.longitudinal_accel()
+	var lat_a := _dynamics.lateral_accel()
+	_debug_line(mesh, cg, cg + Vector3(0.0, 0.15, long_a * accel_scale), Color(1.0, 0.55, 0.15))
+	_debug_line(mesh, cg, cg + Vector3(lat_a * accel_scale, 0.15, 0.0), Color(0.85, 0.35, 1.0))
+	var f_scale: float = _dynamics.config.debug_force_scale
+	var weight := maxf(_dynamics.config.mass_kg * _dynamics.config.gravity, 1.0)
+	var wheels := _dynamics.wheels()
+	for i in wheels.size():
+		var wheel: _VehicleDynamics.Wheel = wheels[i]
+		var contact := Vector3(wheel.local_position.x, 0.0, wheel.local_position.z)
+		var contact_color := Color(0.9, 0.9, 0.9).lerp(Color(0.45, 0.75, 0.3), wheel.surface_blend)
+		_debug_cross(mesh, contact, 0.18, contact_color)
+		var load_height := wheel.normal_load / weight * 1.6
+		_debug_line(mesh, contact, contact + Vector3(0.0, load_height, 0.0), Color(0.95, 0.9, 0.4))
+		var ahead := Vector3(sin(wheel.steer_angle), 0.0, cos(wheel.steer_angle))
+		var right := Vector3(cos(wheel.steer_angle), 0.0, -sin(wheel.steer_angle))
+		_debug_line(mesh, contact, contact + ahead * 0.7, Color(0.3, 0.9, 0.4))
+		_debug_line(mesh, contact, contact + ahead * clampf(wheel.long_slip, -2.5, 2.5) * 0.45, Color(0.95, 0.75, 0.2))
+		_debug_line(mesh, contact, contact + right * wheel.slip_angle * 1.4, Color(0.4, 0.75, 1.0))
+		var used := clampf(wheel.grip_utilization, 0.0, 1.0)
+		_debug_line(mesh, contact, contact + wheel.force_body * f_scale, Color(used, 1.0 - used, 0.15))
+		if i + 1 < _debug_labels.size():
+			var label := _debug_labels[i + 1]
+			label.visible = true
+			label.position = contact + Vector3(0.0, load_height + 0.35, 0.0)
+			var surface := wheel.surface_name
+			if wheel.surface_blend > 0.02 and wheel.surface_blend < 0.98:
+				surface = "%s %.0f%%" % [wheel.surface_name, wheel.surface_blend * 100.0]
+			label.text = "%s\n%.0f N\nuse %.0f%%\nlat %.0f deg\nlong %.2f" % [
+				surface,
+				wheel.normal_load,
+				wheel.grip_utilization * 100.0,
+				rad_to_deg(wheel.slip_angle),
+				wheel.long_slip,
+			]
+	mesh.surface_end()
+	_debug_view.mesh = mesh
+	var summary := _debug_labels[0]
+	summary.visible = true
+	summary.position = cg + Vector3(0.0, 0.85, 0.0)
+	summary.text = "%.0f km/h\nlong a %.1f\nlat a %.1f" % [
+		v_body.z * 3.6,
+		long_a,
+		lat_a,
+	]
+
+
+func _ensure_debug_view() -> void:
+	if _debug_view == null:
+		_debug_view = MeshInstance3D.new()
+		_debug_view.name = "DynamicsDebug"
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.vertex_color_use_as_albedo = true
+		mat.no_depth_test = true
+		_debug_view.material_override = mat
+		_debug_view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(_debug_view)
+	if _debug_labels.size() == 5:
+		return
+	for _i in 5:
+		var label := Label3D.new()
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.no_depth_test = true
+		label.font_size = 48
+		label.pixel_size = 0.002
+		label.outline_size = 6
+		label.outline_modulate = Color(0.0, 0.0, 0.0, 1.0)
+		label.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		add_child(label)
+		_debug_labels.append(label)
+
+
+func _debug_line(mesh: ImmediateMesh, a: Vector3, b: Vector3, color: Color) -> void:
+	mesh.surface_set_color(color)
+	mesh.surface_add_vertex(a)
+	mesh.surface_add_vertex(b)
+
+
+func _debug_cross(mesh: ImmediateMesh, center: Vector3, size: float, color: Color) -> void:
+	_debug_line(mesh, center - Vector3(size, 0.0, 0.0), center + Vector3(size, 0.0, 0.0), color)
+	_debug_line(mesh, center - Vector3(0.0, size, 0.0), center + Vector3(0.0, size, 0.0), color)
+	_debug_line(mesh, center - Vector3(0.0, 0.0, size), center + Vector3(0.0, 0.0, size), color)
