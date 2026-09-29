@@ -284,6 +284,181 @@ text = "Back to garage"
 layout_mode = 2
 text = "Main menu"
 
+[node name="PauseMenu" type="Control" parent="RaceUI"]
+visible = false
+process_mode = 2
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ColorRect" type="ColorRect" parent="RaceUI/PauseMenu"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="Panel" type="PanelContainer" parent="RaceUI/PauseMenu"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -120.0
+offset_right = 160.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="RaceUI/PauseMenu/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="RaceUI/PauseMenu/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="RaceUI/PauseMenu/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Paused"
+horizontal_alignment = 1
+
+[node name="ResumeBtn" type="Button" parent="RaceUI/PauseMenu/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Resume"
+
+[node name="SettingsBtn" type="Button" parent="RaceUI/PauseMenu/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Settings"
+
+[node name="ExitBtn" type="Button" parent="RaceUI/PauseMenu/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Exit race"
+
+[node name="SettingsPanel" type="PanelContainer" parent="RaceUI/PauseMenu"]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -180.0
+offset_right = 180.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="RaceUI/PauseMenu/SettingsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="RaceUI/PauseMenu/SettingsPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="RaceUI/PauseMenu/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+text = "Settings"
+horizontal_alignment = 1
+
+[node name="FullscreenCheck" type="CheckBox" parent="RaceUI/PauseMenu/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+text = "Fullscreen"
+
+[node name="MasterLabel" type="Label" parent="RaceUI/PauseMenu/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+text = "Master volume"
+
+[node name="MasterSlider" type="HSlider" parent="RaceUI/PauseMenu/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+min_value = 0.0
+max_value = 1.0
+step = 0.01
+value = 1.0
+
+[node name="MusicCheck" type="CheckBox" parent="RaceUI/PauseMenu/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+text = "Music"
+
+[node name="ArcadeCheck" type="CheckBox" parent="RaceUI/PauseMenu/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+disabled = true
+text = "Arcade driving"
+
+[node name="BackBtn" type="Button" parent="RaceUI/PauseMenu/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+text = "Back"
+
+[node name="ConfirmPanel" type="PanelContainer" parent="RaceUI/PauseMenu"]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -110.0
+offset_right = 200.0
+offset_bottom = 110.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="RaceUI/PauseMenu/ConfirmPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="RaceUI/PauseMenu/ConfirmPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="RaceUI/PauseMenu/ConfirmPanel/Margin/VBox"]
+layout_mode = 2
+text = "Are you sure?"
+horizontal_alignment = 1
+
+[node name="Body" type="Label" parent="RaceUI/PauseMenu/ConfirmPanel/Margin/VBox"]
+layout_mode = 2
+text = "The race will be lost."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="CancelBtn" type="Button" parent="RaceUI/PauseMenu/ConfirmPanel/Margin/VBox"]
+layout_mode = 2
+text = "Cancel"
+
+[node name="LeaveBtn" type="Button" parent="RaceUI/PauseMenu/ConfirmPanel/Margin/VBox"]
+layout_mode = 2
+text = "Leave race"
+
 [connection signal="body_entered" from="FinishLine" to="." method="_on_finish_area_body_entered"]
 [connection signal="pressed" from="RaceUI/ResultPanel/Panel/Margin/VBox/GarageBtn" to="." method="_on_back_garage_pressed"]
 [connection signal="pressed" from="RaceUI/ResultPanel/Panel/Margin/VBox/MenuBtn" to="." method="_on_main_menu_pressed"]
+[connection signal="pressed" from="RaceUI/PauseMenu/Panel/Margin/VBox/ResumeBtn" to="." method="_on_pause_resume_pressed"]
+[connection signal="pressed" from="RaceUI/PauseMenu/Panel/Margin/VBox/SettingsBtn" to="." method="_on_pause_settings_pressed"]
+[connection signal="pressed" from="RaceUI/PauseMenu/Panel/Margin/VBox/ExitBtn" to="." method="_on_pause_exit_pressed"]
+[connection signal="toggled" from="RaceUI/PauseMenu/SettingsPanel/Margin/VBox/FullscreenCheck" to="." method="_on_pause_fullscreen_toggled"]
+[connection signal="value_changed" from="RaceUI/PauseMenu/SettingsPanel/Margin/VBox/MasterSlider" to="." method="_on_pause_master_volume_changed"]
+[connection signal="toggled" from="RaceUI/PauseMenu/SettingsPanel/Margin/VBox/MusicCheck" to="." method="_on_pause_music_toggled"]
+[connection signal="toggled" from="RaceUI/PauseMenu/SettingsPanel/Margin/VBox/ArcadeCheck" to="." method="_on_pause_arcade_toggled"]
+[connection signal="pressed" from="RaceUI/PauseMenu/SettingsPanel/Margin/VBox/BackBtn" to="." method="_on_pause_settings_back_pressed"]
+[connection signal="pressed" from="RaceUI/PauseMenu/ConfirmPanel/Margin/VBox/CancelBtn" to="." method="_on_pause_confirm_cancel_pressed"]
+[connection signal="pressed" from="RaceUI/PauseMenu/ConfirmPanel/Margin/VBox/LeaveBtn" to="." method="_on_pause_confirm_leave_pressed"]

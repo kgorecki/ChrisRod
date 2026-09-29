@@ -715,6 +715,10 @@ text = "Save game"
 layout_mode = 2
 text = "Load game"
 
+[node name="SettingsBtn" type="Button" parent="GarageUI/ClockMenu/Panel/Margin/VBox" unique_id=210070010]
+layout_mode = 2
+text = "Settings"
+
 [node name="QuitBtn" type="Button" parent="GarageUI/ClockMenu/Panel/Margin/VBox" unique_id=630363616]
 layout_mode = 2
 text = "Quit to main menu"
@@ -722,6 +726,64 @@ text = "Quit to main menu"
 [node name="CloseBtn" type="Button" parent="GarageUI/ClockMenu/Panel/Margin/VBox" unique_id=1735926327]
 layout_mode = 2
 text = "Close"
+
+[node name="SettingsPanel" type="PanelContainer" parent="GarageUI/ClockMenu" unique_id=210070020]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -180.0
+offset_right = 180.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="GarageUI/ClockMenu/SettingsPanel" unique_id=210070021]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="GarageUI/ClockMenu/SettingsPanel/Margin" unique_id=210070022]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="GarageUI/ClockMenu/SettingsPanel/Margin/VBox" unique_id=210070023]
+layout_mode = 2
+text = "Settings"
+horizontal_alignment = 1
+
+[node name="FullscreenCheck" type="CheckBox" parent="GarageUI/ClockMenu/SettingsPanel/Margin/VBox" unique_id=210070024]
+layout_mode = 2
+text = "Fullscreen"
+
+[node name="MasterLabel" type="Label" parent="GarageUI/ClockMenu/SettingsPanel/Margin/VBox" unique_id=210070025]
+layout_mode = 2
+text = "Master volume"
+
+[node name="MasterSlider" type="HSlider" parent="GarageUI/ClockMenu/SettingsPanel/Margin/VBox" unique_id=210070026]
+layout_mode = 2
+min_value = 0.0
+max_value = 1.0
+step = 0.01
+value = 1.0
+
+[node name="MusicCheck" type="CheckBox" parent="GarageUI/ClockMenu/SettingsPanel/Margin/VBox" unique_id=210070027]
+layout_mode = 2
+text = "Music"
+
+[node name="ArcadeCheck" type="CheckBox" parent="GarageUI/ClockMenu/SettingsPanel/Margin/VBox" unique_id=210070028]
+layout_mode = 2
+text = "Arcade driving"
+
+[node name="BackBtn" type="Button" parent="GarageUI/ClockMenu/SettingsPanel/Margin/VBox" unique_id=210070029]
+layout_mode = 2
+text = "Back"
 
 [node name="StatsPanel" type="Control" parent="GarageUI" unique_id=1655883850]
 visible = false
@@ -842,8 +904,14 @@ horizontal_alignment = 1
 
 [connection signal="pressed" from="GarageUI/ClockMenu/Panel/Margin/VBox/SaveBtn" to="." method="_on_clock_save_pressed"]
 [connection signal="pressed" from="GarageUI/ClockMenu/Panel/Margin/VBox/LoadBtn" to="." method="_on_clock_load_pressed"]
+[connection signal="pressed" from="GarageUI/ClockMenu/Panel/Margin/VBox/SettingsBtn" to="." method="_on_clock_settings_pressed"]
 [connection signal="pressed" from="GarageUI/ClockMenu/Panel/Margin/VBox/QuitBtn" to="." method="_on_clock_quit_menu_pressed"]
 [connection signal="pressed" from="GarageUI/ClockMenu/Panel/Margin/VBox/CloseBtn" to="." method="_on_clock_close_pressed"]
+[connection signal="toggled" from="GarageUI/ClockMenu/SettingsPanel/Margin/VBox/FullscreenCheck" to="." method="_on_clock_fullscreen_toggled"]
+[connection signal="value_changed" from="GarageUI/ClockMenu/SettingsPanel/Margin/VBox/MasterSlider" to="." method="_on_clock_master_volume_changed"]
+[connection signal="toggled" from="GarageUI/ClockMenu/SettingsPanel/Margin/VBox/MusicCheck" to="." method="_on_clock_music_toggled"]
+[connection signal="toggled" from="GarageUI/ClockMenu/SettingsPanel/Margin/VBox/ArcadeCheck" to="." method="_on_clock_arcade_toggled"]
+[connection signal="pressed" from="GarageUI/ClockMenu/SettingsPanel/Margin/VBox/BackBtn" to="." method="_on_clock_settings_back_pressed"]
 [connection signal="pressed" from="GarageUI/StatsPanel/Panel/Margin/VBox/StatsClose" to="." method="_on_stats_close_pressed"]
 [connection signal="pressed" from="GarageUI/ColorPickerMenu/Panel/Margin/VBox/HBox/ConfirmBtn" to="." method="_on_spray_confirm_pressed"]
 [connection signal="pressed" from="GarageUI/ColorPickerMenu/Panel/Margin/VBox/HBox/CancelBtn" to="." method="_on_spray_cancel_pressed"]

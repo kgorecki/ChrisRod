@@ -36,6 +36,8 @@ var current_scene_path: String = SCENE_GARAGE
 var selected_opponent_id: int = 0
 ## `RACE_DRAG` (straight quarter mile) or `RACE_ROAD` (turning course).
 var selected_race_type: String = RACE_DRAG
+## The direct-speed driving model from before the tire simulation.
+var arcade_drive: bool = false
 
 ## Whether background music is on. Persisted in settings; also toggled by the garage radio.
 var music_enabled: bool = true
@@ -488,6 +490,7 @@ func save_settings() -> void:
 	cfg.set_value("display", "fullscreen", _get_fullscreen())
 	cfg.set_value("audio", "master_db", AudioServer.get_bus_volume_db(0))
 	cfg.set_value("audio", "music_enabled", music_enabled)
+	cfg.set_value("game", "arcade_drive", arcade_drive)
 	cfg.save(SETTINGS_PATH)
 
 
@@ -504,6 +507,8 @@ func load_settings() -> void:
 		AudioServer.set_bus_volume_db(0, float(cfg.get_value("audio", "master_db")))
 	if cfg.has_section_key("audio", "music_enabled"):
 		music_enabled = bool(cfg.get_value("audio", "music_enabled"))
+	if cfg.has_section_key("game", "arcade_drive"):
+		arcade_drive = bool(cfg.get_value("game", "arcade_drive"))
 
 
 func toggle_music() -> void:
@@ -514,6 +519,11 @@ func set_music_enabled(enabled: bool) -> void:
 	music_enabled = enabled
 	save_settings()
 	update_music()
+
+
+func set_arcade_drive(enabled: bool) -> void:
+	arcade_drive = enabled
+	save_settings()
 
 
 func update_music() -> void:
