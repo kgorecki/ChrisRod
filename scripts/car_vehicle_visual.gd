@@ -280,8 +280,17 @@ func _paint_masked_mesh(mesh_instance: MeshInstance3D, color: Color) -> void:
 			existing.set_shader_parameter("paint_color", color)
 			if tex != null:
 				continue
-		elif mat is StandardMaterial3D:
-			tex = (mat as StandardMaterial3D).albedo_texture
+		var orm: Texture2D = null
+		var normal: Texture2D = null
+		var normal_scale := 1.0
+		if mat is StandardMaterial3D:
+			var std := mat as StandardMaterial3D
+			tex = std.albedo_texture
+			orm = std.metallic_texture
+			if orm == null:
+				orm = std.roughness_texture
+			normal = std.normal_texture
+			normal_scale = std.normal_scale
 		if tex == null:
 			if mat is StandardMaterial3D:
 				var solid := (mat as StandardMaterial3D).duplicate() as StandardMaterial3D
@@ -292,6 +301,13 @@ func _paint_masked_mesh(mesh_instance: MeshInstance3D, color: Color) -> void:
 		shader_mat.shader = _PaintShader
 		shader_mat.set_shader_parameter("albedo_tex", tex)
 		shader_mat.set_shader_parameter("paint_color", color)
+		if orm != null:
+			shader_mat.set_shader_parameter("orm_tex", orm)
+			shader_mat.set_shader_parameter("use_orm", 1.0)
+		if normal != null:
+			shader_mat.set_shader_parameter("normal_tex", normal)
+			shader_mat.set_shader_parameter("use_normal", 1.0)
+			shader_mat.set_shader_parameter("normal_scale", normal_scale)
 		mesh_instance.set_surface_override_material(i, shader_mat)
 
 ## Sit wheel bottoms and the car body on the top of a horizontal floor mesh.

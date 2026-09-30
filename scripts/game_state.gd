@@ -12,7 +12,8 @@ const SCENE_SETTINGS := "res://scenes/settings.tscn"
 
 const MUSIC_GARAGE := "res://assets/music/garage.mp3"
 const MUSIC_RACE := "res://assets/music/race.mp3"
-const PLAYER_CAR_FILE := "res://assets/cars/corvette-1962-1.car"
+const DEFAULT_CAR_ID := "sr1-corvette-1956"
+const PLAYER_CAR_FILE := "res://assets/cars/sr1-corvette-1956.car"
 const PARTS_REGISTER := "res://assets/parts/parts.register"
 const _CarFile := preload("res://scripts/car_file.gd")
 const _PartsRegister := preload("res://scripts/parts_register.gd")
@@ -23,9 +24,9 @@ const QUARTER_MILE_M := 402.336
 const ROAD_RACE_LENGTH_M := QUARTER_MILE_M * 6.0
 
 ## Display name of the player's car.
-var car_name: String = "Basic Car 1"
+var car_name: String = "Corvette 1956"
 ## Current paint color for the player's car.
-var car_color: Color = Color(0.15, 0.45, 0.85, 1.0)
+var car_color: Color = Color(0.78, 0.14, 0.14, 1.0)
 ## Fixed stats (km/h and hp) for UI until tuning exists.
 var vmax_kmh: float = 220.0
 var engine_power_hp: float = 280.0
@@ -45,8 +46,8 @@ var music_enabled: bool = true
 ## Cash on hand for classifieds (parts and used cars).
 var money: int = 2500
 ## Id of the car currently in the garage.
-var current_car_id: String = "basic"
-var owned_car_ids: Array[String] = ["basic"]
+var current_car_id: String = DEFAULT_CAR_ID
+var owned_car_ids: Array[String] = [DEFAULT_CAR_ID]
 var owned_part_ids: Array[String] = []
 var equipped_part_ids: Array[String] = []
 var owned_gearbox_ids: Array[String] = ["gb_auto3"]
@@ -75,8 +76,9 @@ var ENGINES: Array[Dictionary] = []
 var WHEELS: Array[Dictionary] = []
 
 const USED_CARS: Array[Dictionary] = [
-	{"id": "basic", "name": "Corvette 1962", "price": 0, "vmax": 220.0, "hp": 280.0, "color": Color(0.15, 0.45, 0.85, 1.0), "car_file": PLAYER_CAR_FILE},
-	{"id": "vette-1956", "name": "Vette 1956", "price": 1200, "vmax": 195.0, "hp": 210.0, "color": Color(0.78, 0.14, 0.14, 1.0), "car_file": "res://assets/cars/vette-1956.car"},
+	{"id": DEFAULT_CAR_ID, "name": "Corvette 1956", "price": 0, "vmax": 220.0, "hp": 280.0, "color": Color(0.78, 0.14, 0.14, 1.0), "car_file": PLAYER_CAR_FILE},
+	{"id": "fairlane-1957", "name": "Fairlane 500", "price": 1050, "vmax": 185.0, "hp": 230.0, "color": Color(0.91, 0.89, 0.82, 1.0), "car_file": "res://assets/cars/fairlane-1957.car"},
+	{"id": "corvette-1962", "name": "Corvette 1962", "price": 1500, "vmax": 220.0, "hp": 280.0, "color": Color(0.15, 0.45, 0.85, 1.0), "car_file": "res://assets/cars/corvette-1962-1.car"},
 	{"id": "coupe", "name": "Street Coupe", "price": 1800, "vmax": 235.0, "hp": 300.0, "color": Color(0.72, 0.12, 0.12, 1.0)},
 	{"id": "roadster", "name": "Open Roadster", "price": 2400, "vmax": 245.0, "hp": 320.0, "color": Color(0.92, 0.78, 0.18, 1.0)},
 	{"id": "hotrod", "name": "Shop Hot Rod", "price": 3600, "vmax": 260.0, "hp": 360.0, "color": Color(0.12, 0.12, 0.12, 1.0)},
@@ -167,17 +169,17 @@ func get_stock_transmission() -> Dictionary:
 
 
 func new_game() -> void:
-	car_name = "Corvette 1962"
-	car_color = Color(0.15, 0.45, 0.85, 1.0)
+	car_name = "Corvette 1956"
+	car_color = Color(0.78, 0.14, 0.14, 1.0)
 	vmax_kmh = 220.0
 	engine_power_hp = 280.0
 	current_scene_path = SCENE_GARAGE
 	selected_opponent_id = 0
 	selected_race_type = RACE_DRAG
 	money = 2500
-	current_car_id = "basic"
+	current_car_id = DEFAULT_CAR_ID
 	owned_car_ids.clear()
-	owned_car_ids.append("basic")
+	owned_car_ids.append(DEFAULT_CAR_ID)
 	owned_part_ids.clear()
 	equipped_part_ids.clear()
 	owned_gearbox_ids.clear()
@@ -257,8 +259,10 @@ func load_game() -> bool:
 	else:
 		selected_race_type = RACE_DRAG
 	money = int(d.get("money", money))
-	current_car_id = str(d.get("current_car_id", current_car_id))
+	current_car_id = _migrate_car_id(str(d.get("current_car_id", current_car_id)))
 	owned_car_ids = _string_array(d.get("owned_car_ids", owned_car_ids))
+	for i in owned_car_ids.size():
+		owned_car_ids[i] = _migrate_car_id(owned_car_ids[i])
 	owned_part_ids = _string_array(d.get("owned_part_ids", owned_part_ids))
 	if d.has("equipped_part_ids"):
 		equipped_part_ids = _string_array(d.get("equipped_part_ids", []))
@@ -271,7 +275,7 @@ func load_game() -> bool:
 	owned_wheel_ids = _string_array(d.get("owned_wheel_ids", owned_wheel_ids))
 	equipped_wheel_id = str(d.get("equipped_wheel_id", equipped_wheel_id))
 	if owned_car_ids.is_empty():
-		owned_car_ids = ["basic"]
+		owned_car_ids = [DEFAULT_CAR_ID]
 	if owned_gearbox_ids.is_empty():
 		owned_gearbox_ids = [DEFAULT_GEARBOX_ID]
 	if listing_by_id(GEARBOXES, equipped_gearbox_id).is_empty():
@@ -357,11 +361,11 @@ func gearbox_ratio_text(box: Dictionary) -> String:
 func refresh_car_stats() -> void:
 	var car: Dictionary = listing_by_id(USED_CARS, current_car_id)
 	if car.is_empty():
-		car = listing_by_id(USED_CARS, "basic")
+		car = listing_by_id(USED_CARS, DEFAULT_CAR_ID)
 	car_name = str(car.get("name", car_name))
 	vmax_kmh = float(car.get("vmax", vmax_kmh))
 	engine_power_hp = float(car.get("hp", engine_power_hp))
-	if current_car_id == "basic":
+	if current_car_id == DEFAULT_CAR_ID:
 		var engine := get_equipped_engine()
 		if not engine.is_empty():
 			car_name = str(car_spec.get("name", car_name))
@@ -467,6 +471,14 @@ func buy_or_select_car(car_id: String) -> String:
 	load_player_car()
 	refresh_car_stats()
 	return ""
+
+
+func _migrate_car_id(car_id: String) -> String:
+	if car_id == "basic":
+		return "corvette-1962"
+	if car_id == "vette-1956":
+		return DEFAULT_CAR_ID
+	return car_id
 
 
 func _string_array(value: Variant) -> Array[String]:

@@ -1,0 +1,47 @@
+{
+  "id": "fairlane-1957",
+  "name": "Fairlane 500",
+  "model": {
+    "path": "res://assets/cars/sr1-fairlane-1957.glb",
+    "position": [0.0, 0.0, 0.0],
+    "height": 1.6
+  },
+  "register": "res://assets/parts/parts.register",
+  "wheels": {
+    "overlay": false,
+    "mounts": [
+      {
+        "node": "WheelFrontLeft",
+        "position": [-1.204, 0.452, 1.996],
+        "rotation": [0, 180, 90]
+      },
+      {
+        "node": "WheelFrontRight",
+        "position": [1.172, 0.452, 1.996],
+        "rotation": [0, 180, -90]
+      },
+      {
+        "node": "WheelBackLeft",
+        "position": [-1.190, 0.452, -1.677],
+        "rotation": [0, 180, 90]
+      },
+      {
+        "node": "WheelBackRight",
+        "position": [1.217, 0.452, -1.677],
+        "rotation": [0, 180, -90]
+      }
+    ]
+  },
+  "parts": {
+    "engine": "v8-265",
+    "transmission": "gb_auto3",
+    "wheels": "wheel-c1"
+  },
+  "chassis": {
+    "mass": 1590,
+    "wheelbase": 2.997,
+    "cg_height": 0.56,
+    "front_axle_fraction": 0.45,
+    "max_steer_deg": 28
+  }
+}
