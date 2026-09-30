@@ -1,6 +1,21 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/newspaper.gd" id="1"]
+
+[sub_resource type="Environment" id="PreviewEnv"]
+background_mode = 1
+background_color = Color(0.62, 0.56, 0.46, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.9, 0.86, 0.78, 1)
+ambient_light_energy = 0.65
+
+[sub_resource type="StandardMaterial3D" id="PreviewFloorMat"]
+albedo_color = Color(0.38, 0.34, 0.28, 1)
+roughness = 0.92
+
+[sub_resource type="BoxMesh" id="PreviewFloor"]
+material = SubResource("PreviewFloorMat")
+size = Vector3(16, 0.08, 16)
 
 [node name="Newspaper" type="Control"]
 layout_mode = 3
@@ -162,6 +177,106 @@ theme_override_colors/font_hover_color = Color(0.08, 0.07, 0.06, 1)
 theme_override_colors/font_pressed_color = Color(0.08, 0.07, 0.06, 1)
 text = "Fold it up — back to garage"
 
+[node name="PreviewOverlay" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="PreviewPlate" type="ColorRect" parent="PreviewOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 72.0
+offset_top = 48.0
+offset_right = -72.0
+offset_bottom = -96.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.91, 0.88, 0.78, 0.92)
+
+[node name="PreviewPanel" type="MarginContainer" parent="PreviewOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 72.0
+offset_top = 48.0
+offset_right = -72.0
+offset_bottom = -96.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+
+[node name="PreviewCard" type="VBoxContainer" parent="PreviewOverlay/PreviewPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PreviewCaption" type="Label" parent="PreviewOverlay/PreviewPanel/PreviewCard"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.08, 0.07, 0.06, 1)
+theme_override_font_sizes/font_size = 22
+text = ""
+horizontal_alignment = 1
+
+[node name="PreviewFrame" type="SubViewportContainer" parent="PreviewOverlay/PreviewPanel/PreviewCard"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+stretch = true
+
+[node name="PreviewViewport" type="SubViewport" parent="PreviewOverlay/PreviewPanel/PreviewCard/PreviewFrame"]
+unique_name_in_owner = true
+own_world_3d = true
+handle_input_locally = false
+size = Vector2i(960, 540)
+render_target_update_mode = 2
+
+[node name="PreviewWorld" type="Node3D" parent="PreviewOverlay/PreviewPanel/PreviewCard/PreviewFrame/PreviewViewport"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="PreviewOverlay/PreviewPanel/PreviewCard/PreviewFrame/PreviewViewport/PreviewWorld"]
+environment = SubResource("PreviewEnv")
+
+[node name="KeyLight" type="DirectionalLight3D" parent="PreviewOverlay/PreviewPanel/PreviewCard/PreviewFrame/PreviewViewport/PreviewWorld"]
+transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 4, 8, 6)
+light_energy = 1.15
+shadow_enabled = true
+
+[node name="FillLight" type="DirectionalLight3D" parent="PreviewOverlay/PreviewPanel/PreviewCard/PreviewFrame/PreviewViewport/PreviewWorld"]
+transform = Transform3D(0.5, 0.612, -0.612, 0, 0.707, 0.707, 0.866, -0.354, 0.354, -4, 5, 2)
+light_energy = 0.35
+
+[node name="Floor" type="MeshInstance3D" parent="PreviewOverlay/PreviewPanel/PreviewCard/PreviewFrame/PreviewViewport/PreviewWorld"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.04, 0)
+mesh = SubResource("PreviewFloor")
+
+[node name="PreviewCamera" type="Camera3D" parent="PreviewOverlay/PreviewPanel/PreviewCard/PreviewFrame/PreviewViewport/PreviewWorld"]
+unique_name_in_owner = true
+current = true
+fov = 40.0
+
+[node name="PreviewMount" type="Node3D" parent="PreviewOverlay/PreviewPanel/PreviewCard/PreviewFrame/PreviewViewport/PreviewWorld"]
+unique_name_in_owner = true
+
+[node name="PreviewBack" type="Button" parent="PreviewOverlay/PreviewPanel/PreviewCard"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(220, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.08, 0.07, 0.06, 1)
+theme_override_colors/font_hover_color = Color(0.08, 0.07, 0.06, 1)
+theme_override_colors/font_pressed_color = Color(0.08, 0.07, 0.06, 1)
+text = "Back"
+
+[connection signal="pressed" from="PreviewOverlay/PreviewPanel/PreviewCard/PreviewBack" to="." method="_close_car_preview"]
 [connection signal="pressed" from="Margin/VBox/IndexSection/IndexDeck/UsedCarsCard" to="." method="_on_used_cars_tab_pressed"]
 [connection signal="pressed" from="Margin/VBox/IndexSection/IndexDeck/AutoPartsCard" to="." method="_on_auto_parts_tab_pressed"]
 [connection signal="pressed" from="Margin/VBox/BackButton" to="." method="_on_back_pressed"]

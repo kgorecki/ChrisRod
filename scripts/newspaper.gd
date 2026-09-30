@@ -1,6 +1,7 @@
 extends Control
 
 const _MenuNav := preload("res://scripts/menu_nav.gd")
+const _CarVisual := preload("res://scenes/car_vehicle_visual.tscn")
 
 const SECTION_INDEX := "index"
 const SECTION_CARS := "cars"
@@ -14,17 +15,33 @@ const SECTION_PARTS := "parts"
 @onready var _cars_section: VBoxContainer = %CarsSection
 @onready var _parts_section: VBoxContainer = %PartsSection
 @onready var _back_button: Button = $Margin/VBox/BackButton
+@onready var _preview_overlay: Control = %PreviewOverlay
+@onready var _preview_caption: Label = %PreviewCaption
+@onready var _preview_frame: SubViewportContainer = %PreviewFrame
+@onready var _preview_mount: Node3D = %PreviewMount
+@onready var _preview_camera: Camera3D = %PreviewCamera
+@onready var _preview_back: Button = %PreviewBack
 
 var _section: String = SECTION_INDEX
 var _nav = _MenuNav.new()
+var _preview_car_id: String = ""
+var _preview_pivot: Node3D
 
 
 func _ready() -> void:
 	GameState.current_scene_path = GameState.SCENE_NEWSPAPER
 	GameState.update_music()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_preview_camera.look_at_from_position(Vector3(5.6, 2.1, 8.2), Vector3(0.0, 0.8, 0.0))
+	GameState.roll_newspaper_colors()
 	_show_section(SECTION_INDEX)
 	_refresh()
+
+
+func _process(delta: float) -> void:
+	if not _preview_overlay.visible or not _preview_frame.visible:
+		return
+	_preview_mount.rotate_y(delta * 0.35)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -149,21 +166,102 @@ func _make_car_card(car: Dictionary) -> Control:
 	var current := GameState.current_car_id == car_id
 	var price := int(car.get("price", 0))
 	var box := _card()
+	box.set_meta(&"car_id", car_id)
+	box.mouse_filter = Control.MOUSE_FILTER_STOP
+	box.gui_input.connect(_on_car_card_input.bind(car_id))
+	if car_id == _preview_car_id:
+		box.modulate = Color(0.96, 0.84, 0.58, 1)
 	box.add_child(_heading(str(car.get("name", "Car"))))
 	box.add_child(_body("%.0f km/h   %.0f hp" % [float(car.get("vmax", 0.0)), float(car.get("hp", 0.0))]))
 	var btn := _ink_button()
 	if current:
 		btn.text = "In the garage"
 		btn.disabled = true
+		btn.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	elif owned:
 		btn.text = "Pull into garage"
+		btn.pressed.connect(_show_car_preview.bind(car_id))
 		btn.pressed.connect(_on_buy_car.bind(car_id))
+	elif GameState.owned_car_ids.size() >= GameState.MAX_OWNED_CARS:
+		btn.text = "Garage is full"
+		btn.disabled = true
 	else:
 		btn.text = "Buy — $%d" % price
 		btn.disabled = GameState.money < price
+		btn.pressed.connect(_show_car_preview.bind(car_id))
 		btn.pressed.connect(_on_buy_car.bind(car_id))
 	box.add_child(btn)
 	return box
+
+
+func _on_car_card_input(event: InputEvent, car_id: String) -> void:
+	if not event is InputEventMouseButton:
+		return
+	var mouse := event as InputEventMouseButton
+	if mouse.pressed and mouse.button_index == MOUSE_BUTTON_LEFT:
+		_show_car_preview(car_id)
+
+
+func _show_car_preview(car_id: String) -> void:
+	if car_id == _preview_car_id:
+		return
+	_preview_car_id = car_id
+	_tint_preview_card()
+	var car: Dictionary = GameState.listing_by_id(GameState.USED_CARS, car_id)
+	var car_name := str(car.get("name", "Car"))
+	var path := str(car.get("car_file", ""))
+	var paint := GameState.newspaper_color(car_id)
+	_open_preview_overlay()
+	if path.is_empty() or not FileAccess.file_exists(path):
+		_preview_frame.visible = false
+		_preview_caption.text = "%s — no photograph with this ad." % car_name
+		return
+	if _preview_pivot == null:
+		var pivot := _CarVisual.instantiate() as Node3D
+		if pivot == null or not pivot.has_method(&"prepare_preview"):
+			_preview_frame.visible = false
+			_preview_caption.text = "Couldn't open the photograph."
+			return
+		var prepared: Variant = pivot.call(&"prepare_preview", path, paint)
+		if not bool(prepared):
+			pivot.free()
+			_preview_frame.visible = false
+			_preview_caption.text = "%s — no photograph with this ad." % car_name
+			return
+		_preview_mount.add_child(pivot)
+		_preview_pivot = pivot
+	elif not bool(_preview_pivot.call(&"preview_listing", path, paint)):
+		_preview_frame.visible = false
+		_preview_caption.text = "%s — no photograph with this ad." % car_name
+		return
+	_preview_mount.rotation = Vector3.ZERO
+	_preview_frame.visible = true
+	_preview_caption.text = car_name
+
+
+func _open_preview_overlay() -> void:
+	_preview_overlay.visible = true
+	_wire_menu()
+
+
+func _close_car_preview() -> void:
+	if not _preview_overlay.visible:
+		return
+	_preview_overlay.visible = false
+	_preview_car_id = ""
+	_tint_preview_card()
+	_wire_menu()
+
+
+func _tint_preview_card() -> void:
+	for child in _cars_list.get_children():
+		if not child is Control:
+			continue
+		var card := child as Control
+		if str(card.get_meta(&"car_id", "")) == _preview_car_id:
+			card.modulate = Color(0.96, 0.84, 0.58, 1)
+		else:
+			card.modulate = Color.WHITE
 
 
 func _ink_button() -> Button:
@@ -186,6 +284,7 @@ func _heading(text: String) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.add_theme_color_override("font_color", Color(0.08, 0.07, 0.06, 1))
 	return label
 
@@ -193,6 +292,7 @@ func _heading(text: String) -> Label:
 func _body(text: String) -> Label:
 	var label := Label.new()
 	label.text = text
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.modulate = Color(0.25, 0.22, 0.18, 1)
 	return label
 
@@ -252,11 +352,12 @@ func _on_buy_part(part_id: String) -> void:
 
 func _on_buy_car(car_id: String) -> void:
 	var err := GameState.buy_or_select_car(car_id)
-	if err.is_empty():
-		_status.text = "It's yours. Check the garage."
-	else:
+	if not err.is_empty():
 		_status.text = err
-	_refresh()
+		_refresh()
+		return
+	GameState.current_scene_path = GameState.SCENE_GARAGE
+	get_tree().change_scene_to_file(GameState.SCENE_GARAGE)
 
 
 func _on_used_cars_tab_pressed() -> void:
@@ -272,6 +373,9 @@ func _show_section(section: String) -> void:
 	_index_section.visible = section == SECTION_INDEX
 	_cars_section.visible = section == SECTION_CARS
 	_parts_section.visible = section == SECTION_PARTS
+	if section != SECTION_CARS:
+		_preview_overlay.visible = false
+		_preview_car_id = ""
 	if section == SECTION_INDEX:
 		_status.text = ""
 		_back_button.text = "Fold it up — back to garage"
@@ -282,7 +386,9 @@ func _show_section(section: String) -> void:
 
 func _wire_menu() -> void:
 	var items: Array = []
-	if _section == SECTION_INDEX:
+	if _preview_overlay.visible:
+		items = [_preview_back, _back_button]
+	elif _section == SECTION_INDEX:
 		items = [%UsedCarsCard, %AutoPartsCard, _back_button]
 	elif _section == SECTION_CARS:
 		items = _nav.collect_buttons(_cars_list)
@@ -294,6 +400,9 @@ func _wire_menu() -> void:
 
 
 func _on_back_pressed() -> void:
+	if _preview_overlay.visible:
+		_close_car_preview()
+		return
 	if _section != SECTION_INDEX:
 		_show_section(SECTION_INDEX)
 		return

@@ -13,20 +13,77 @@ const _CarFile := preload("res://scripts/car_file.gd")
 const _PaintShader := preload("res://shaders/car_paint_mask.gdshader")
 
 var _waiting_for_stl: bool = false
+var _previewing: bool = false
+var _preview_spec: Dictionary = {}
+var _preview_color: Color = Color.WHITE
+
+
+## Load a catalog car for a viewport that is not the player's garage car.
+## Call before the node enters the tree. Returns false when the file fails to load.
+func prepare_preview(car_file: String, paint: Color) -> bool:
+	return _load_preview(car_file, paint)
+
+
+## Swap the preview to another catalog car after this node is already on screen.
+func preview_listing(car_file: String, paint: Color) -> bool:
+	if not _load_preview(car_file, paint):
+		return false
+	if is_inside_tree():
+		_apply_car_file()
+		_reload_preview_models()
+		set_car_body_color(_preview_color)
+	return true
+
+
+func _load_preview(car_file: String, paint: Color) -> bool:
+	var spec := _CarFile.load_path(car_file)
+	var errors: Variant = spec.get("errors", [])
+	if typeof(errors) == TYPE_ARRAY and not (errors as Array).is_empty():
+		return false
+	_previewing = true
+	_preview_spec = spec
+	_preview_color = paint
+	return true
+
+
+func reload_player_car() -> void:
+	if _previewing:
+		return
+	_apply_car_file()
+	_reload_preview_models()
+	apply_equipped_wheels()
+	var loaded_body := get_node_or_null("CarBody") as Node
+	if loaded_body != null:
+		_hide_baked_wheels(loaded_body)
+	set_car_body_color(_active_paint_color())
+
+
+func _active_spec() -> Dictionary:
+	if _previewing:
+		return _preview_spec
+	return GameState.car_spec
+
+
+func _active_paint_color() -> Color:
+	if _previewing:
+		return _preview_color
+	return GameState.car_color
+
 
 func _enter_tree() -> void:
 	_apply_car_file()
 
 
 func _ready() -> void:
-	apply_equipped_wheels()
+	if not _previewing:
+		apply_equipped_wheels()
 	_apply_wheel_scale()
 	var loaded_body := get_node_or_null("CarBody") as Node
 	if loaded_body != null:
 		_hide_baked_wheels(loaded_body)
 		if loaded_body.has_signal(&"stl_loaded"):
 			loaded_body.connect(&"stl_loaded", Callable(self, "_on_body_hide_wheels"))
-	set_car_body_color(GameState.car_color)
+	set_car_body_color(_active_paint_color())
 	var car_body := get_node_or_null("body") as MeshInstance3D
 	if car_body != null and body_paint != null:
 		# CarBody `_ready` runs before this node, so the STL may already be loaded.
@@ -40,7 +97,7 @@ func _on_body_hide_wheels(_mesh: Variant) -> void:
 	var loaded_body := get_node_or_null("CarBody") as Node
 	if loaded_body != null:
 		_hide_baked_wheels(loaded_body)
-	set_car_body_color(GameState.car_color)
+	set_car_body_color(_active_paint_color())
 
 
 func _hide_baked_wheels(node: Node) -> void:
@@ -74,8 +131,10 @@ func _on_car_body_stl_loaded(_mesh: Mesh, car_body: MeshInstance3D) -> void:
 
 
 func _apply_car_file() -> void:
-	var spec: Dictionary = GameState.car_spec
+	var spec: Dictionary = _active_spec()
 	if spec.is_empty() or not spec.get("errors", []).is_empty():
+		if _previewing:
+			return
 		spec = _CarFile.load_path(GameState.current_car_file_path())
 	var errors: Variant = spec.get("errors", [])
 	if typeof(errors) == TYPE_ARRAY and not (errors as Array).is_empty():
@@ -132,6 +191,26 @@ func _apply_mount(node: Node3D, model_path: String, mount: Dictionary, height: f
 	node.set("auto_scale_to_height", height)
 
 
+func _reload_preview_models() -> void:
+	_reload_mount(get_node_or_null("CarBody") as Node3D)
+	if not _overlay_wheels_enabled():
+		_set_overlay_wheels_visible(false)
+		return
+	for wname in ["WheelFrontLeft", "WheelFrontRight", "WheelBackLeft", "WheelBackRight"]:
+		_reload_mount(get_node_or_null(wname) as Node3D)
+
+
+func _reload_mount(node: Node3D) -> void:
+	if node == null or not node.has_method(&"load_model"):
+		return
+	for child in node.get_children():
+		node.remove_child(child)
+		child.free()
+	if node is MeshInstance3D:
+		(node as MeshInstance3D).mesh = null
+	node.call(&"load_model")
+
+
 func apply_equipped_wheels() -> void:
 	if not _overlay_wheels_enabled():
 		_set_overlay_wheels_visible(false)
@@ -140,7 +219,7 @@ func apply_equipped_wheels() -> void:
 
 
 func _overlay_wheels_enabled() -> bool:
-	var wheels: Variant = GameState.car_spec.get("wheels", {})
+	var wheels: Variant = _active_spec().get("wheels", {})
 	if typeof(wheels) != TYPE_DICTIONARY:
 		return true
 	return bool((wheels as Dictionary).get("overlay", true))

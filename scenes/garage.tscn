@@ -802,9 +802,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -200.0
-offset_top = -100.0
+offset_top = -130.0
 offset_right = 200.0
-offset_bottom = 100.0
+offset_bottom = 130.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -894,13 +894,96 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -220.0
-offset_top = -48.0
+offset_top = -92.0
 offset_right = 220.0
-offset_bottom = -16.0
+offset_bottom = -52.0
 grow_horizontal = 2
 grow_vertical = 0
 text = "Click or Esc to hang the calendar back"
 horizontal_alignment = 1
+
+[node name="HudTop" type="Control" parent="GarageUI"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 44.0
+grow_horizontal = 2
+mouse_filter = 0
+mouse_default_cursor_shape = 2
+
+[node name="Bar" type="ColorRect" parent="GarageUI/HudTop"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.12, 0.09, 0.07, 0.92)
+
+[node name="Accent" type="ColorRect" parent="GarageUI/HudTop"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -3.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+color = Color(0.55, 0.12, 0.1, 1)
+
+[node name="CarNameLabel" type="Label" parent="GarageUI/HudTop"]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
+theme_override_font_sizes/font_size = 22
+text = "Corvette 1956"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HudBottom" type="Control" parent="GarageUI"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -44.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="Bar" type="ColorRect" parent="GarageUI/HudBottom"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.12, 0.09, 0.07, 0.92)
+
+[node name="Accent" type="ColorRect" parent="GarageUI/HudBottom"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 3.0
+grow_horizontal = 2
+mouse_filter = 2
+color = Color(0.55, 0.12, 0.1, 1)
+
+[node name="CashLabel" type="Label" parent="GarageUI/HudBottom"]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.95, 0.9, 0.78, 1)
+theme_override_font_sizes/font_size = 22
+text = "Cash: $0"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [connection signal="pressed" from="GarageUI/ClockMenu/Panel/Margin/VBox/SaveBtn" to="." method="_on_clock_save_pressed"]
 [connection signal="pressed" from="GarageUI/ClockMenu/Panel/Margin/VBox/LoadBtn" to="." method="_on_clock_load_pressed"]

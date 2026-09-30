@@ -19,6 +19,9 @@ const _MenuNav := preload("res://scripts/menu_nav.gd")
 @onready var _spray_color_picker: ColorPicker = $GarageUI/ColorPickerMenu/Panel/Margin/VBox/ColorPicker
 @onready var _calendar: StaticBody3D = $InteractCalendar
 @onready var _calendar_hint: Label = $GarageUI/CalendarHint
+@onready var _hud_top: Control = $GarageUI/HudTop
+@onready var _hud_car_name: Label = %CarNameLabel
+@onready var _hud_cash: Label = %CashLabel
 @onready var _lift: StaticBody3D = $InteractLift
 @onready var _lift_arm: Node3D = $InteractLift/LiftArm
 
@@ -52,6 +55,9 @@ var _calendar_blend: float = 0.0
 var _calendar_inspecting: bool = false
 var _calendar_tween: Tween
 var _nav = _MenuNav.new()
+var _car_list: Control
+var _car_list_rows: VBoxContainer
+var _car_list_count: Label
 
 const _MONTHS := [
 	"", "January", "February", "March", "April", "May", "June",
@@ -96,6 +102,9 @@ func _ready() -> void:
 	_calendar_home = _calendar.global_transform
 	_build_calendar_page()
 	_calendar_hint.visible = false
+	_hud_top.gui_input.connect(_on_hud_car_stripe_input)
+	_build_car_list()
+	_refresh_hud()
 	# Apply stored paint color immediately (it will wait for the STL if needed).
 	if _car_pivot.has_method(&"set_car_body_color"):
 		_car_pivot.set_car_body_color(GameState.car_color)
@@ -214,6 +223,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_hide_parts_board()
 		get_viewport().set_input_as_handled()
 		return
+	if _car_list != null and _car_list.visible and event.is_action_pressed(&"ui_cancel"):
+		_hide_car_list()
+		get_viewport().set_input_as_handled()
+		return
 	if _calendar_inspecting and event.is_action_pressed(&"ui_cancel"):
 		_hang_calendar()
 		get_viewport().set_input_as_handled()
@@ -279,6 +292,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
 			if _clock_menu.visible or _stats_panel.visible or _spray_menu.visible:
+				return
+			if _car_list != null and _car_list.visible:
+				_hide_car_list()
+				get_viewport().set_input_as_handled()
 				return
 			if _calendar_inspecting:
 				_hang_calendar()
@@ -401,6 +418,8 @@ func _hide_garage_overlays() -> void:
 	_spray_menu.visible = false
 	if _parts_board != null:
 		_parts_board.visible = false
+	if _car_list != null:
+		_car_list.visible = false
 	_sync_menu_nav()
 
 
@@ -435,6 +454,8 @@ func _sync_menu_nav() -> void:
 		])
 	elif _parts_board != null and _parts_board.visible:
 		_nav.setup(_nav.collect_buttons(_parts_board))
+	elif _car_list != null and _car_list.visible:
+		_nav.setup(_nav.collect_buttons(_car_list))
 	else:
 		_nav.clear()
 
@@ -521,13 +542,15 @@ func _show_spray_picker() -> void:
 	# Hide other garage overlays so clicks go to the picker.
 	_clock_menu.visible = false
 	_stats_panel.visible = false
+	if _car_list != null:
+		_car_list.visible = false
 	_spray_color_picker.color = GameState.car_color
 	_spray_menu.visible = true
 	_sync_menu_nav()
 
 
 func _on_spray_confirm_pressed() -> void:
-	GameState.car_color = _spray_color_picker.color
+	GameState.set_car_color(_spray_color_picker.color)
 	# Update the preview immediately.
 	if _car_pivot.has_method(&"set_car_body_color"):
 		_car_pivot.set_car_body_color(GameState.car_color)
@@ -595,6 +618,8 @@ func _show_parts_board() -> void:
 	_clock_menu.visible = false
 	_spray_menu.visible = false
 	_stats_panel.visible = false
+	if _car_list != null:
+		_car_list.visible = false
 	_rebuild_parts_board()
 	_parts_board.visible = true
 	_sync_menu_nav()
@@ -606,6 +631,8 @@ func _show_spares_board() -> void:
 	_clock_menu.visible = false
 	_spray_menu.visible = false
 	_stats_panel.visible = false
+	if _car_list != null:
+		_car_list.visible = false
 	_rebuild_parts_board()
 	_parts_board.visible = true
 	_sync_menu_nav()
@@ -619,6 +646,8 @@ func _show_wheel_board() -> void:
 	_clock_menu.visible = false
 	_spray_menu.visible = false
 	_stats_panel.visible = false
+	if _car_list != null:
+		_car_list.visible = false
 	_rebuild_parts_board()
 	_parts_board.visible = true
 	_sync_menu_nav()
@@ -784,8 +813,128 @@ func _on_fit_part(kind: String, part_id: String) -> void:
 	if not err.is_empty():
 		_parts_status.text = err
 	_rebuild_parts_board()
+	_refresh_hud()
 	if _parts_board.visible:
 		_sync_menu_nav()
+
+
+func _refresh_hud() -> void:
+	_hud_car_name.text = GameState.car_name
+	_hud_cash.text = "Cash: $%d" % GameState.money
+
+
+func _on_hud_car_stripe_input(event: InputEvent) -> void:
+	if _wheel_job or not event is InputEventMouseButton:
+		return
+	var mb := event as InputEventMouseButton
+	if not mb.pressed or mb.button_index != MOUSE_BUTTON_LEFT:
+		return
+	_toggle_car_list()
+	get_viewport().set_input_as_handled()
+
+
+func _build_car_list() -> void:
+	var root := PanelContainer.new()
+	root.name = "CarList"
+	root.visible = false
+	root.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	root.offset_left = -220.0
+	root.offset_top = 48.0
+	root.offset_right = 220.0
+	root.offset_bottom = 48.0
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.12, 0.09, 0.07, 0.96)
+	style.border_color = Color(0.55, 0.12, 0.1, 1.0)
+	style.set_border_width_all(2)
+	style.content_margin_left = 12.0
+	style.content_margin_right = 12.0
+	style.content_margin_top = 10.0
+	style.content_margin_bottom = 10.0
+	root.add_theme_stylebox_override(&"panel", style)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override(&"separation", 8)
+	root.add_child(box)
+	var title := Label.new()
+	title.text = "Cars in the garage"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_color_override(&"font_color", Color(0.95, 0.9, 0.78, 1))
+	box.add_child(title)
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.custom_minimum_size = Vector2(400, 40)
+	box.add_child(scroll)
+	_car_list_rows = VBoxContainer.new()
+	_car_list_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_car_list_rows.add_theme_constant_override(&"separation", 6)
+	scroll.add_child(_car_list_rows)
+	_car_list_count = Label.new()
+	_car_list_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_car_list_count.add_theme_color_override(&"font_color", Color(0.95, 0.9, 0.78, 1))
+	box.add_child(_car_list_count)
+	$GarageUI.add_child(root)
+	_car_list = root
+
+
+func _toggle_car_list() -> void:
+	if _wheel_job or _car_list == null:
+		return
+	if _car_list.visible:
+		_hide_car_list()
+		return
+	_hide_garage_overlays()
+	_rebuild_car_list()
+	_car_list.visible = true
+	_sync_menu_nav()
+
+
+func _hide_car_list() -> void:
+	if _car_list == null or not _car_list.visible:
+		return
+	_car_list.visible = false
+	_sync_menu_nav()
+
+
+func _rebuild_car_list() -> void:
+	for child in _car_list_rows.get_children():
+		_car_list_rows.remove_child(child)
+		child.free()
+	for car_id in GameState.owned_car_ids:
+		var car: Dictionary = GameState.listing_by_id(GameState.USED_CARS, car_id)
+		var car_label := str(car.get("name", car_id))
+		var btn := Button.new()
+		var current := car_id == GameState.current_car_id
+		btn.text = car_label if not current else "%s    ·    in the bay" % car_label
+		btn.disabled = current
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if not current:
+			btn.pressed.connect(_on_car_list_pick.bind(car_id))
+		_car_list_rows.add_child(btn)
+	_car_list_count.text = "%d of %d" % [GameState.owned_car_ids.size(), GameState.MAX_OWNED_CARS]
+	var rows := mini(maxi(GameState.owned_car_ids.size(), 1), 8)
+	var scroll := _car_list_rows.get_parent() as Control
+	if scroll != null:
+		scroll.custom_minimum_size = Vector2(400, rows * 36)
+	_car_list.offset_left = -220.0
+	_car_list.offset_right = 220.0
+	_car_list.offset_top = 48.0
+	_car_list.offset_bottom = 48.0 + 88.0 + float(rows * 36)
+
+
+func _on_car_list_pick(car_id: String) -> void:
+	var err := GameState.buy_or_select_car(car_id)
+	if not err.is_empty():
+		_hide_car_list()
+		return
+	_apply_active_car_visual()
+	_refresh_hud()
+	_hide_car_list()
+
+
+func _apply_active_car_visual() -> void:
+	if _car_pivot.has_method(&"reload_player_car"):
+		_car_pivot.call(&"reload_player_car")
+	_align_wheels_to_floor()
 
 
 func _show_stats() -> void:
@@ -796,13 +945,14 @@ func _show_stats() -> void:
 	if typeof(gears) == TYPE_ARRAY:
 		gear_count = gears.size()
 	var kind := "automatic" if bool(box.get("automatic", false)) else "manual"
-	var t := "Car: %s\n\nTop speed: %.0f km/h\nEngine power: %.0f hp\nGearbox: %s\n%s, %d gears" % [
+	var t := "Car: %s\n\nTop speed: %.0f km/h\nEngine power: %.0f hp\nGearbox: %s\n%s, %d gears\nFuel: %.0f L" % [
 		GameState.car_name,
 		GameState.get_effective_vmax_kmh(),
 		GameState.engine_power_hp,
 		str(box.get("name", "—")),
 		kind,
 		gear_count,
+		GameState.fuel,
 	]
 	_stats_label.text = t
 	_stats_panel.visible = true
@@ -926,6 +1076,7 @@ func _run_wheel_change(wheel: Dictionary) -> void:
 	if err.is_empty() and _car_pivot.has_method(&"apply_equipped_wheels"):
 		_car_pivot.call(&"apply_equipped_wheels")
 	_align_wheels_to_floor()
+	_refresh_hud()
 
 
 func _swap_one_wheel(mount: Node3D, wheel: Dictionary, radius: float) -> void:
