@@ -136,11 +136,12 @@ var _brake_filtered: float = 0.0
 
 func _init() -> void:
 	var grass := config.grass
-	grass.grip_multiplier = 0.22
+	## Weaker than asphalt, still enough lateral force to steer back to the road.
+	grass.grip_multiplier = 0.62
 	grass.rolling_resistance = 0.04
 	grass.drive_multiplier = 0.30
-	grass.steer_multiplier = 0.75
-	grass.speed_resistance = 3.2
+	grass.steer_multiplier = 0.90
+	grass.speed_resistance = 1.0
 
 
 func apply_setup(chassis: Dictionary, grip_rating: float) -> void:

@@ -14,7 +14,8 @@ const MASS_KG := 1360.0
 const CG_HEIGHT_M := 0.48
 const GRAVITY := 9.81
 const MU_DRY := 1.02
-const MU_OFFROAD := 0.48
+## Loose surface. Still well under dry grip, but the nose can come around.
+const MU_OFFROAD := 0.78
 const FRONT_AXLE_FRACTION := 0.46
 const CORNERING_FRONT := 52000.0
 const CORNERING_REAR := 64000.0
