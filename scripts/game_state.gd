@@ -44,7 +44,7 @@ var selected_opponent_id: int = 0
 ## `RACE_DRAG` (straight quarter mile) or `RACE_ROAD` (turning course).
 var selected_race_type: String = RACE_DRAG
 ## The direct-speed driving model from before the tire simulation.
-var arcade_drive: bool = false
+var arcade_drive: bool = true
 
 ## Whether background music is on. Persisted in settings; also toggled by the garage radio.
 var music_enabled: bool = true
