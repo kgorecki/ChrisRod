@@ -51,6 +51,8 @@ var _arcade_accel: float = 7.0
 
 func _ready() -> void:
 	motion_mode = MOTION_MODE_FLOATING
+	# Layer 2 is cars. Keep the road mask and also collide with other cars.
+	collision_mask = collision_mask | collision_layer
 	_visual = get_node_or_null("CarPivot") as Node3D
 	var i: int = clampi(GameState.selected_opponent_id, 0, GameState.OPPONENTS.size() - 1)
 	var opp: Dictionary = GameState.OPPONENTS[i]
@@ -72,6 +74,35 @@ func _ready() -> void:
 
 func get_path_s() -> float:
 	return _path_s
+
+
+func planar_velocity() -> Vector3:
+	if GameState.arcade_drive:
+		return Vector3(sin(rotation.y), 0.0, cos(rotation.y)) * forward_speed
+	return _dynamics.cg_velocity
+
+
+## Moves this car out of another car and keeps the bumped speed. No damage.
+func apply_car_bump(offset: Vector3, new_velocity: Vector3) -> void:
+	var planar := Vector3(new_velocity.x, 0.0, new_velocity.z)
+	if not GameState.arcade_drive:
+		global_position += offset
+		_dynamics.cg_velocity = planar
+		velocity = planar
+		_sync_motion_state()
+		return
+	var forward := Vector3(sin(rotation.y), 0.0, cos(rotation.y))
+	var track := _race_track(get_parent())
+	if track != null and track.has_method(&"sample_at"):
+		var sample: Dictionary = track.sample_at(_path_s)
+		var yaw := float(sample.get("yaw", rotation.y))
+		forward = Vector3(sin(yaw), 0.0, cos(yaw))
+		var right: Vector3 = sample.get("right", Vector3(cos(yaw), 0.0, -sin(yaw)))
+		_path_s += offset.dot(forward)
+		_lane_x += offset.dot(right)
+		_lane_ready = true
+	global_position += offset
+	forward_speed = clampf(planar.dot(forward), 0.0, _max_mps)
 
 
 func _physics_process(delta: float) -> void:

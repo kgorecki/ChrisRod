@@ -1,6 +1,7 @@
 extends Node3D
 
 const _MenuNav := preload("res://scripts/menu_nav.gd")
+const _CarBump := preload("res://scripts/car_bump.gd")
 
 const QUARTER_MILE_M := 402.336
 
@@ -43,6 +44,7 @@ var _race_started: bool = false
 @onready var _pause_arcade: CheckBox = $RaceUI/PauseMenu/SettingsPanel/Margin/VBox/ArcadeCheck
 
 var _race_over: bool = false
+var _car_bump: _CarBump = _CarBump.new()
 var _fuel_used: bool = false
 var _opponent_finished: bool = false
 var _is_road: bool = false
@@ -59,6 +61,8 @@ const _ON_GREEN := Color(0.2, 0.95, 0.28, 1)
 
 
 func _ready() -> void:
+	# After both cars have moved, so a bump sees this frame's positions.
+	process_priority = 1
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_player.process_mode = Node.PROCESS_MODE_PAUSABLE
 	_opponent.process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -182,6 +186,12 @@ func _debug_mesh_instances_recursive(node: Node, label: String) -> void:
 				" local_aabb_size=", aabb.size,
 				" center_world=", center_world)
 		_debug_mesh_instances_recursive(child, label)
+
+
+func _physics_process(_delta: float) -> void:
+	if get_tree().paused or _race_over or not _race_started:
+		return
+	_car_bump.resolve(_player, _opponent)
 
 
 func _process(delta: float) -> void:

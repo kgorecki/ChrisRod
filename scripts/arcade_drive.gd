@@ -55,6 +55,22 @@ func reset() -> void:
 	_stop_slide()
 
 
+func planar_velocity() -> Vector3:
+	var forward := Vector3(sin(heading_yaw), 0.0, cos(heading_yaw))
+	var right := Vector3(cos(heading_yaw), 0.0, -sin(heading_yaw))
+	return forward * forward_speed + right * _lateral_speed
+
+
+## Replaces the planar velocity after a bumper hit. Forward speed stays at or above zero.
+func apply_planar_velocity(body: CharacterBody3D, planar: Vector3, car_center: Vector3) -> void:
+	var forward := Vector3(sin(heading_yaw), 0.0, cos(heading_yaw))
+	var right := Vector3(cos(heading_yaw), 0.0, -sin(heading_yaw))
+	forward_speed = maxf(planar.dot(forward), 0.0)
+	_lateral_speed = planar.dot(right)
+	body.velocity = forward * forward_speed + right * _lateral_speed
+	_apply_heading(body, car_center)
+
+
 func _stop_slide() -> void:
 	_lateral_speed = 0.0
 	_yaw_rate = 0.0

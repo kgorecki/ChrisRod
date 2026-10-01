@@ -392,6 +392,7 @@ func _paint_masked_mesh(mesh_instance: MeshInstance3D, color: Color) -> void:
 ## Sit wheel bottoms and the car body on the top of a horizontal floor mesh.
 func align_wheels_to_floor(floor_mesh_instance: MeshInstance3D) -> void:
 	if floor_mesh_instance == null or floor_mesh_instance.mesh == null:
+		fit_parent_collision()
 		return
 
 	var faabb := floor_mesh_instance.get_aabb()
@@ -409,6 +410,7 @@ func align_wheels_to_floor(floor_mesh_instance: MeshInstance3D) -> void:
 	for wname in wheel_names:
 		_snap_node_bottom_to_y(get_node_or_null(wname) as Node3D, floor_top_y)
 	_snap_node_bottom_to_y(get_node_or_null("CarBody") as Node3D, floor_top_y)
+	fit_parent_collision()
 
 
 func _snap_node_bottom_to_y(node: Node3D, floor_top_y: float) -> void:
@@ -422,6 +424,70 @@ func _snap_node_bottom_to_y(node: Node3D, floor_top_y: float) -> void:
 		var gp := node.global_position
 		gp.y += delta
 		node.global_position = gp
+
+
+## Size the parent car's box to the visible body. The bottom stays clear of the road.
+func fit_parent_collision() -> void:
+	var body := get_parent() as Node3D
+	if body == null or not is_inside_tree():
+		return
+	var shape_node := body.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if shape_node == null:
+		return
+	force_update_transform()
+	var bounds := _collect_mesh_bounds(self, body.global_transform.affine_inverse())
+	if bounds.size.length_squared() < 0.01:
+		return
+	const BOTTOM_LIFT_M := 0.08
+	if bounds.size.y > BOTTOM_LIFT_M + 0.4:
+		bounds.position.y += BOTTOM_LIFT_M
+		bounds.size.y -= BOTTOM_LIFT_M
+	var box := BoxShape3D.new()
+	box.size = bounds.size
+	shape_node.shape = box
+	shape_node.position = bounds.get_center()
+	shape_node.rotation = Vector3.ZERO
+
+
+func _collect_mesh_bounds(node: Node, to_space: Transform3D) -> AABB:
+	if node is Node3D and not (node as Node3D).is_visible_in_tree():
+		return AABB()
+	var merged := AABB()
+	var started := false
+	if node is MeshInstance3D:
+		var mi := node as MeshInstance3D
+		if mi.mesh != null:
+			merged = _aabb_in_space(to_space * mi.global_transform, mi.mesh.get_aabb())
+			started = true
+	for child in node.get_children():
+		var child_bounds := _collect_mesh_bounds(child, to_space)
+		if child_bounds.size == Vector3.ZERO:
+			continue
+		if not started:
+			merged = child_bounds
+			started = true
+		else:
+			merged = merged.merge(child_bounds)
+	return merged
+
+
+func _aabb_in_space(xf: Transform3D, local: AABB) -> AABB:
+	var mins := Vector3(INF, INF, INF)
+	var maxs := Vector3(-INF, -INF, -INF)
+	var origin := local.position
+	var extent := local.size
+	for i in 8:
+		var corner := origin
+		if (i & 1) != 0:
+			corner.x += extent.x
+		if (i & 2) != 0:
+			corner.y += extent.y
+		if (i & 4) != 0:
+			corner.z += extent.z
+		var point := xf * corner
+		mins = mins.min(point)
+		maxs = maxs.max(point)
+	return AABB(mins, maxs - mins)
 
 
 func _mesh_bottom_y(node: Node3D) -> float:

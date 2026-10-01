@@ -44,6 +44,8 @@ var _arcade_active: bool = false
 
 func _ready() -> void:
 	motion_mode = MOTION_MODE_FLOATING
+	# Layer 2 is cars. Keep the road mask and also collide with other cars.
+	collision_mask = collision_mask | collision_layer
 	_apply_car_spec()
 	_cache_axles()
 	_layout_wheels()
@@ -101,6 +103,26 @@ func _apply_camera_mode() -> void:
 
 func get_forward_speed() -> float:
 	return forward_speed
+
+
+func planar_velocity() -> Vector3:
+	if GameState.arcade_drive:
+		return _arcade.planar_velocity()
+	return _dynamics.cg_velocity
+
+
+## Moves this car out of another car and keeps the bumped speed. No damage.
+func apply_car_bump(offset: Vector3, new_velocity: Vector3) -> void:
+	global_position += offset
+	var planar := Vector3(new_velocity.x, 0.0, new_velocity.z)
+	if GameState.arcade_drive:
+		_arcade.apply_planar_velocity(self, planar, _car_center)
+		forward_speed = _arcade.forward_speed
+		heading_yaw = _arcade.heading_yaw
+	else:
+		_dynamics.cg_velocity = planar
+		velocity = planar
+		_sync_motion_state()
 
 
 func get_gear_label() -> String:
