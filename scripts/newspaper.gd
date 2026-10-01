@@ -19,6 +19,7 @@ const SECTION_PARTS := "parts"
 @onready var _preview_caption: Label = %PreviewCaption
 @onready var _preview_frame: SubViewportContainer = %PreviewFrame
 @onready var _preview_mount: Node3D = %PreviewMount
+@onready var _preview_floor: MeshInstance3D = %Floor
 @onready var _preview_camera: Camera3D = %PreviewCamera
 @onready var _preview_back: Button = %PreviewBack
 
@@ -235,8 +236,15 @@ func _show_car_preview(car_id: String) -> void:
 		_preview_caption.text = "%s — no photograph with this ad." % car_name
 		return
 	_preview_mount.rotation = Vector3.ZERO
+	_seat_preview_car()
 	_preview_frame.visible = true
 	_preview_caption.text = car_name
+
+
+func _seat_preview_car() -> void:
+	if _preview_pivot == null or not _preview_pivot.has_method(&"align_wheels_to_floor"):
+		return
+	_preview_pivot.call(&"align_wheels_to_floor", _preview_floor)
 
 
 func _open_preview_overlay() -> void:

@@ -206,6 +206,31 @@ roughness = 0.4
 [sub_resource type="BoxShape3D" id="SprayShape"]
 size = Vector3(0.18, 0.38, 0.08)
 
+[sub_resource type="StandardMaterial3D" id="FuelCanMat"]
+albedo_color = Color(0.72, 0.12, 0.1, 1)
+roughness = 0.45
+metallic = 0.35
+
+[sub_resource type="BoxMesh" id="FuelCanBodyMesh"]
+material = SubResource("FuelCanMat")
+size = Vector3(0.22, 0.34, 0.14)
+
+[sub_resource type="StandardMaterial3D" id="FuelCanCapMat"]
+albedo_color = Color(0.15, 0.15, 0.16, 1)
+metallic = 0.6
+roughness = 0.35
+
+[sub_resource type="BoxMesh" id="FuelCanCapMesh"]
+material = SubResource("FuelCanCapMat")
+size = Vector3(0.08, 0.05, 0.08)
+
+[sub_resource type="BoxMesh" id="FuelCanHandleMesh"]
+material = SubResource("FuelCanCapMat")
+size = Vector3(0.03, 0.16, 0.03)
+
+[sub_resource type="BoxShape3D" id="FuelCanShape"]
+size = Vector3(0.36, 0.5, 0.28)
+
 [sub_resource type="StandardMaterial3D" id="ShelfMat"]
 albedo_color = Color(0.32, 0.19, 0.1, 1)
 roughness = 0.82
@@ -603,6 +628,23 @@ surface_material_override/0 = SubResource("SprayMat")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="InteractSprayPistol" unique_id=672364029]
 shape = SubResource("SprayShape")
+
+[node name="InteractFuelCan" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 0.2, 1.15)
+
+[node name="Body" type="MeshInstance3D" parent="InteractFuelCan"]
+mesh = SubResource("FuelCanBodyMesh")
+
+[node name="Cap" type="MeshInstance3D" parent="InteractFuelCan"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.04, 0.19, 0)
+mesh = SubResource("FuelCanCapMesh")
+
+[node name="Handle" type="MeshInstance3D" parent="InteractFuelCan"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.08, 0.06, 0)
+mesh = SubResource("FuelCanHandleMesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractFuelCan"]
+shape = SubResource("FuelCanShape")
 
 [node name="InteractLift" type="StaticBody3D" parent="." unique_id=210050001]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.35, 0.06, 1.8)

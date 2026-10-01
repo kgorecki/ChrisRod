@@ -255,6 +255,7 @@ transform = Transform3D(0.5, 0.612, -0.612, 0, 0.707, 0.707, 0.866, -0.354, 0.35
 light_energy = 0.35
 
 [node name="Floor" type="MeshInstance3D" parent="PreviewOverlay/PreviewPanel/PreviewCard/PreviewFrame/PreviewViewport/PreviewWorld"]
+unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.04, 0)
 mesh = SubResource("PreviewFloor")
 

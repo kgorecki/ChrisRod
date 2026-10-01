@@ -58,6 +58,11 @@ var _nav = _MenuNav.new()
 var _car_list: Control
 var _car_list_rows: VBoxContainer
 var _car_list_count: Label
+var _fuel_panel: Control
+var _fuel_status: Label
+var _fuel_note: Label
+var _fuel_fill_btn: Button
+var _fuel_close_btn: Button
 
 const _MONTHS := [
 	"", "January", "February", "March", "April", "May", "June",
@@ -94,6 +99,8 @@ func _ready() -> void:
 	$InteractDesk/Shelf/Radio.set_meta(&"garage_interact", &"radio")
 	$InteractDoors.set_meta(&"garage_interact", &"doors")
 	$InteractSprayPistol.set_meta(&"garage_interact", &"spray")
+	$InteractFuelCan.set_meta(&"garage_interact", &"fuel")
+	_build_fuel_panel()
 	_lift.set_meta(&"garage_interact", &"lift")
 	_lift_home = _lift.global_transform
 	_lift_arm_home = _lift_arm.position
@@ -225,6 +232,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _car_list != null and _car_list.visible and event.is_action_pressed(&"ui_cancel"):
 		_hide_car_list()
+		get_viewport().set_input_as_handled()
+		return
+	if _fuel_panel != null and _fuel_panel.visible and event.is_action_pressed(&"ui_cancel"):
+		_hide_fuel_panel()
 		get_viewport().set_input_as_handled()
 		return
 	if _calendar_inspecting and event.is_action_pressed(&"ui_cancel"):
@@ -420,6 +431,8 @@ func _hide_garage_overlays() -> void:
 		_parts_board.visible = false
 	if _car_list != null:
 		_car_list.visible = false
+	if _fuel_panel != null:
+		_fuel_panel.visible = false
 	_sync_menu_nav()
 
 
@@ -452,6 +465,8 @@ func _sync_menu_nav() -> void:
 			$GarageUI/ColorPickerMenu/Panel/Margin/VBox/HBox/ConfirmBtn,
 			$GarageUI/ColorPickerMenu/Panel/Margin/VBox/HBox/CancelBtn,
 		])
+	elif _fuel_panel != null and _fuel_panel.visible:
+		_nav.setup([_fuel_fill_btn, _fuel_close_btn])
 	elif _parts_board != null and _parts_board.visible:
 		_nav.setup(_nav.collect_buttons(_parts_board))
 	elif _car_list != null and _car_list.visible:
@@ -532,6 +547,8 @@ func _handle_interact(kind: Variant) -> void:
 			get_tree().change_scene_to_file(GameState.SCENE_OPPONENT_SELECT)
 		&"spray":
 			_show_spray_picker()
+		&"fuel":
+			_show_fuel_panel()
 		&"calendar":
 			_bring_calendar_forward()
 		&"lift":
@@ -544,6 +561,8 @@ func _show_spray_picker() -> void:
 	_stats_panel.visible = false
 	if _car_list != null:
 		_car_list.visible = false
+	if _fuel_panel != null:
+		_fuel_panel.visible = false
 	_spray_color_picker.color = GameState.car_color
 	_spray_menu.visible = true
 	_sync_menu_nav()
@@ -620,6 +639,8 @@ func _show_parts_board() -> void:
 	_stats_panel.visible = false
 	if _car_list != null:
 		_car_list.visible = false
+	if _fuel_panel != null:
+		_fuel_panel.visible = false
 	_rebuild_parts_board()
 	_parts_board.visible = true
 	_sync_menu_nav()
@@ -633,6 +654,8 @@ func _show_spares_board() -> void:
 	_stats_panel.visible = false
 	if _car_list != null:
 		_car_list.visible = false
+	if _fuel_panel != null:
+		_fuel_panel.visible = false
 	_rebuild_parts_board()
 	_parts_board.visible = true
 	_sync_menu_nav()
@@ -648,6 +671,8 @@ func _show_wheel_board() -> void:
 	_stats_panel.visible = false
 	if _car_list != null:
 		_car_list.visible = false
+	if _fuel_panel != null:
+		_fuel_panel.visible = false
 	_rebuild_parts_board()
 	_parts_board.visible = true
 	_sync_menu_nav()
@@ -893,6 +918,96 @@ func _hide_car_list() -> void:
 		return
 	_car_list.visible = false
 	_sync_menu_nav()
+
+
+func _build_fuel_panel() -> void:
+	var root := Control.new()
+	root.name = "FuelPanel"
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.visible = false
+	root.mouse_filter = Control.MOUSE_FILTER_STOP
+	var dim := ColorRect.new()
+	dim.color = Color(0.05, 0.05, 0.06, 0.55)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.add_child(dim)
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.offset_left = -200.0
+	panel.offset_top = -90.0
+	panel.offset_right = 200.0
+	panel.offset_bottom = 90.0
+	root.add_child(panel)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override(&"margin_left", 16)
+	margin.add_theme_constant_override(&"margin_right", 16)
+	margin.add_theme_constant_override(&"margin_top", 14)
+	margin.add_theme_constant_override(&"margin_bottom", 14)
+	panel.add_child(margin)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override(&"separation", 10)
+	margin.add_child(box)
+	var title := Label.new()
+	title.text = "Fuel"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(title)
+	_fuel_status = Label.new()
+	_fuel_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(_fuel_status)
+	_fuel_note = Label.new()
+	_fuel_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_fuel_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(_fuel_note)
+	_fuel_fill_btn = Button.new()
+	_fuel_fill_btn.pressed.connect(_on_fuel_fill_pressed)
+	box.add_child(_fuel_fill_btn)
+	_fuel_close_btn = Button.new()
+	_fuel_close_btn.text = "Close"
+	_fuel_close_btn.pressed.connect(_hide_fuel_panel)
+	box.add_child(_fuel_close_btn)
+	$GarageUI.add_child(root)
+	_fuel_panel = root
+
+
+func _show_fuel_panel() -> void:
+	if _wheel_job or _fuel_panel == null:
+		return
+	_hide_garage_overlays()
+	_refresh_fuel_panel()
+	_fuel_panel.visible = true
+	_sync_menu_nav()
+
+
+func _hide_fuel_panel() -> void:
+	if _fuel_panel == null or not _fuel_panel.visible:
+		return
+	_fuel_panel.visible = false
+	_sync_menu_nav()
+
+
+func _refresh_fuel_panel() -> void:
+	_fuel_status.text = "Tank: %.0f / %.0f L" % [GameState.fuel, GameState.DEFAULT_TANK_L]
+	var price := GameState.refuel_price()
+	if price <= 0:
+		_fuel_fill_btn.text = "Tank is full"
+		_fuel_fill_btn.disabled = true
+		_fuel_note.text = ""
+		return
+	_fuel_fill_btn.text = "Fill up — $%d" % price
+	_fuel_fill_btn.disabled = GameState.money < price
+	if GameState.money < price:
+		_fuel_note.text = "Not enough cash."
+	else:
+		_fuel_note.text = ""
+
+
+func _on_fuel_fill_pressed() -> void:
+	var err := GameState.refuel_tank()
+	_refresh_fuel_panel()
+	if not err.is_empty() and err != "The tank is already full.":
+		_fuel_note.text = err
+	_refresh_hud()
+	if _fuel_panel != null and _fuel_panel.visible:
+		_sync_menu_nav()
 
 
 func _rebuild_car_list() -> void:

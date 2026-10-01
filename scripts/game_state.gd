@@ -15,6 +15,8 @@ const MUSIC_RACE := "res://assets/music/race.mp3"
 const DEFAULT_CAR_ID := "sr1-corvette-1956"
 const MAX_OWNED_CARS := 16
 const DEFAULT_TANK_L := 60.0
+const FUEL_L_PER_KM := 5.0
+const FUEL_PRICE_PER_L := 2
 const PLAYER_CAR_FILE := "res://assets/cars/sr1-corvette-1956.car"
 const PARTS_REGISTER := "res://assets/parts/parts.register"
 const _CarFile := preload("res://scripts/car_file.gd")
@@ -509,6 +511,44 @@ func set_car_color(next: Color) -> void:
 func set_fuel(amount: float) -> void:
 	fuel = clampf(amount, 0.0, DEFAULT_TANK_L)
 	_sync_record_from_active()
+
+
+func race_length_m(race_type: String = "") -> float:
+	var kind := selected_race_type if race_type.is_empty() else race_type
+	if kind == RACE_ROAD:
+		return ROAD_RACE_LENGTH_M
+	return QUARTER_MILE_M
+
+
+func race_fuel_liters(race_type: String = "") -> float:
+	var liters := race_length_m(race_type) / 1000.0 * FUEL_L_PER_KM
+	return maxf(round(liters), 1.0)
+
+
+func has_fuel_for_race(race_type: String = "") -> bool:
+	return fuel + 0.05 >= race_fuel_liters(race_type)
+
+
+func consume_race_fuel(race_type: String = "") -> void:
+	set_fuel(fuel - race_fuel_liters(race_type))
+
+
+func refuel_price() -> int:
+	var missing := DEFAULT_TANK_L - fuel
+	if missing <= 0.05:
+		return 0
+	return maxi(int(ceil(missing * float(FUEL_PRICE_PER_L))), 1)
+
+
+func refuel_tank() -> String:
+	var price := refuel_price()
+	if price <= 0:
+		return "The tank is already full."
+	if money < price:
+		return "Not enough cash."
+	money -= price
+	set_fuel(DEFAULT_TANK_L)
+	return ""
 
 
 func buy_or_select_car(car_id: String) -> String:

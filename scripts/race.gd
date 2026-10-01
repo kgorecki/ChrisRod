@@ -43,6 +43,7 @@ var _race_started: bool = false
 @onready var _pause_arcade: CheckBox = $RaceUI/PauseMenu/SettingsPanel/Margin/VBox/ArcadeCheck
 
 var _race_over: bool = false
+var _fuel_used: bool = false
 var _opponent_finished: bool = false
 var _is_road: bool = false
 var _elapsed: float = 0.0
@@ -221,6 +222,9 @@ func _advance_countdown(delta: float) -> void:
 			_countdown_phase = 2
 			_phase_time = 0.0
 			_race_started = true
+			if not _fuel_used:
+				_fuel_used = true
+				GameState.consume_race_fuel()
 			_refresh_traffic_lights()
 
 
@@ -297,7 +301,7 @@ func _show_engine_blown() -> void:
 		_mobile.visible = false
 	if _rpm_meter != null:
 		_rpm_meter.visible = false
-	_result_text.text = "You stayed in the red too long — the engine is blown."
+	_result_text.text = "You stayed in the red too long — the engine is blown.\n\nFuel left: %.0f L" % GameState.fuel
 	_wire_result_menu()
 
 
@@ -317,6 +321,7 @@ func _show_result(player_won: bool) -> void:
 		_result_text.text = "You crossed the quarter mile first — you win!"
 	else:
 		_result_text.text = "Your opponent reached the line first — you lose."
+	_result_text.text += "\n\nFuel left: %.0f L" % GameState.fuel
 	_wire_result_menu()
 
 
