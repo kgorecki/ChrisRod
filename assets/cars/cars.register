@@ -1,0 +1,40 @@
+{
+  "cars": [
+    {
+      "id": "sr1-corvette-1956",
+      "name": "Corvette 1956",
+      "price": 0,
+      "vmax": 220.0,
+      "hp": 280.0,
+      "color": [0.78, 0.14, 0.14, 1.0],
+      "car_file": "res://assets/cars/sr1-corvette-1956.car"
+    },
+    {
+      "id": "fairlane-1957",
+      "name": "Fairlane 500",
+      "price": 1050,
+      "vmax": 185.0,
+      "hp": 230.0,
+      "color": [0.91, 0.89, 0.82, 1.0],
+      "car_file": "res://assets/cars/fairlane-1957.car"
+    },
+    {
+      "id": "ford-coupe-1932",
+      "name": "Ford Coupe 1932",
+      "price": 1250,
+      "vmax": 220.0,
+      "hp": 280.0,
+      "color": [0.62, 0.08, 0.07, 1.0],
+      "car_file": "res://assets/cars/ford-coupe-1932.car"
+    },
+    {
+      "id": "corvette-1962",
+      "name": "Corvette 1962",
+      "price": 1500,
+      "vmax": 220.0,
+      "hp": 280.0,
+      "color": [0.15, 0.45, 0.85, 1.0],
+      "car_file": "res://assets/cars/corvette-1962-1.car"
+    }
+  ]
+}

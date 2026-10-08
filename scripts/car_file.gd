@@ -64,6 +64,7 @@ static func _parse_model(root: Dictionary, result: Dictionary) -> void:
 	result.model = {
 		"path": path,
 		"position": _vec3(body.get("position", [0.0, 0.55, 0.0])),
+		"rotation": _vec3(body.get("rotation", [0.0, 0.0, 0.0])),
 		"height": float(body.get("height", 5.0)),
 	}
 

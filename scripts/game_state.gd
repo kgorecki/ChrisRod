@@ -19,8 +19,10 @@ const FUEL_L_PER_KM := 5.0
 const FUEL_PRICE_PER_L := 2
 const PLAYER_CAR_FILE := "res://assets/cars/sr1-corvette-1956.car"
 const PARTS_REGISTER := "res://assets/parts/parts.register"
+const CARS_REGISTER := "res://assets/cars/cars.register"
 const _CarFile := preload("res://scripts/car_file.gd")
 const _PartsRegister := preload("res://scripts/parts_register.gd")
+const _CarsRegister := preload("res://scripts/cars_register.gd")
 
 const RACE_DRAG := "drag"
 const RACE_ROAD := "road"
@@ -79,20 +81,12 @@ const OPPONENTS: Array[Dictionary] = [
 
 const DEFAULT_GEARBOX_ID := "gb_auto3"
 
-## Filled from `parts.register` at startup. The newspaper sells these lists.
+## Filled from the registers at startup. The newspaper sells these lists.
 var PARTS: Array[Dictionary] = []
 var GEARBOXES: Array[Dictionary] = []
 var ENGINES: Array[Dictionary] = []
 var WHEELS: Array[Dictionary] = []
-
-const USED_CARS: Array[Dictionary] = [
-	{"id": DEFAULT_CAR_ID, "name": "Corvette 1956", "price": 0, "vmax": 220.0, "hp": 280.0, "color": Color(0.78, 0.14, 0.14, 1.0), "car_file": PLAYER_CAR_FILE},
-	{"id": "fairlane-1957", "name": "Fairlane 500", "price": 1050, "vmax": 185.0, "hp": 230.0, "color": Color(0.91, 0.89, 0.82, 1.0), "car_file": "res://assets/cars/fairlane-1957.car"},
-	{"id": "corvette-1962", "name": "Corvette 1962", "price": 1500, "vmax": 220.0, "hp": 280.0, "color": Color(0.15, 0.45, 0.85, 1.0), "car_file": "res://assets/cars/corvette-1962-1.car"},
-	{"id": "coupe", "name": "Street Coupe", "price": 1800, "vmax": 235.0, "hp": 300.0, "color": Color(0.72, 0.12, 0.12, 1.0)},
-	{"id": "roadster", "name": "Open Roadster", "price": 2400, "vmax": 245.0, "hp": 320.0, "color": Color(0.92, 0.78, 0.18, 1.0)},
-	{"id": "hotrod", "name": "Shop Hot Rod", "price": 3600, "vmax": 260.0, "hp": 360.0, "color": Color(0.12, 0.12, 0.12, 1.0)},
-]
+var USED_CARS: Array[Dictionary] = []
 
 
 var _music_player: AudioStreamPlayer
@@ -105,6 +99,7 @@ func _ready() -> void:
 	add_child(_music_player)
 	load_settings()
 	load_parts_register()
+	load_cars_register()
 	load_player_car()
 	if not car_records.has(current_car_id):
 		_sync_record_from_active()
@@ -120,6 +115,15 @@ func load_parts_register() -> void:
 	GEARBOXES = _dict_list(register.get("transmissions", []))
 	ENGINES = _dict_list(register.get("engines", []))
 	WHEELS = _dict_list(register.get("wheels", []))
+
+
+func load_cars_register() -> void:
+	var register: Dictionary = _CarsRegister.load_path(CARS_REGISTER)
+	var errors: Variant = register.get("errors", [])
+	if typeof(errors) == TYPE_ARRAY:
+		for err in errors:
+			push_error(str(err))
+	USED_CARS = _dict_list(register.get("cars", []))
 
 
 func _dict_list(value: Variant) -> Array[Dictionary]:
